@@ -39,6 +39,8 @@ jobs:
           npm run build
           npm run test:integration
           python tests/oracle.py
+          python -m pip install -r requirements-test.txt
+          python tests/dxf_interop.py
           npm run demo
       - name: 浏览器测试
         run: |
