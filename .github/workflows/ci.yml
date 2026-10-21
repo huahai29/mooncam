@@ -1,0 +1,56 @@
+name: MoonCam 检查
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 安装 MoonBit stable
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o /tmp/install-moonbit.sh
+          bash /tmp/install-moonbit.sh
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: 格式与严格检查
+        run: |
+          moon version --all
+          moon fmt --check
+          moon check --deny-warn --target all
+      - name: 多后端测试与纯 MoonBit 示例
+        run: |
+          moon test --target wasm
+          moon test --target wasm-gc
+          moon test --target js
+          moon test --target native
+          moon run examples/library --target wasm-gc
+      - name: 构建、导出与独立验证
+        run: |
+          npm run build
+          npm run test:integration
+          python tests/oracle.py
+          npm run demo
+      - name: 浏览器测试
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:browser
+      - name: 保存报告与浏览器截图
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mooncam-validation
+          path: |
+            artifacts/
+            test-results/
+            web/

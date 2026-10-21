@@ -1,0 +1,106 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "huahai29/mooncam"
+
+// Values
+pub fn analyze(Program, Geometry, Int, Double, Double) -> Result[Analysis, String]
+
+pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
+
+pub fn csv(Array[CamPoint]) -> String
+
+pub fn dxf_mm(Array[CamPoint]) -> String
+
+pub fn evaluate(Program, Double) -> Result[Motion, String]
+
+pub fn example_program(Law) -> Program
+
+pub fn finite(Double) -> Bool
+
+pub fn normalized(Law, Double) -> Result[Motion, String]
+
+pub fn profile_crossings(Array[CamPoint]) -> Result[Int, String]
+
+pub fn program(Array[Segment]) -> Result[Program, String]
+
+pub fn run_json(String) -> String
+
+pub fn sample(Program, Geometry, Int) -> Result[Array[CamPoint], String]
+
+pub fn search_base(Program, Double, Double, Double, Double, Int, Int, Double, Double) -> Result[SearchResult, String]
+
+pub fn svg(Array[CamPoint]) -> String
+
+pub fn timed(Program, Double, Double) -> Result[Motion, String]
+
+pub fn validate_geometry(Geometry) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+pub(all) struct Analysis {
+  points : Array[CamPoint]
+  max_pressure : Double
+  pressure_angle : Double
+  min_offset_factor : Double
+  undercut_angle : Double
+  max_velocity : Double
+  max_acceleration : Double
+  max_jerk : Double
+  jerk_jumps : Int
+  sampled_feasible : Bool
+}
+
+pub(all) struct CamPoint {
+  theta : Double
+  motion : Motion
+  pitch_x : Double
+  pitch_y : Double
+  x : Double
+  y : Double
+  normal_x : Double
+  normal_y : Double
+  pressure : Double
+  curvature : Double
+  offset_factor : Double
+}
+
+pub(all) struct Geometry {
+  base_radius : Double
+  roller_radius : Double
+  offset : Double
+}
+
+pub(all) enum Law {
+  Cycloidal
+  Polynomial345
+  Polynomial4567
+}
+
+pub(all) struct Motion {
+  s : Double
+  v : Double
+  a : Double
+  j : Double
+}
+
+pub struct Program {
+  segments : Array[Segment]
+}
+
+pub(all) struct SearchResult {
+  geometry : Geometry
+  analysis : Analysis
+  tested : Int
+  grid_step : Double
+  verification_resolution : Int
+}
+
+pub(all) struct Segment {
+  angle : Double
+  lift : Double
+  law : Law
+}
+
+// Type aliases
+
+// Traits

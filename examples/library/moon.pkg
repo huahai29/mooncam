@@ -1,0 +1,6 @@
+import {
+  "huahai29/mooncam" @cam,
+  "moonbitlang/core/math",
+}
+
+pkgtype(kind: "executable")
