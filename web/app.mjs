@@ -71,7 +71,7 @@ function download(name,content,type='text/plain') {
   const url=URL.createObjectURL(new Blob([content],{type})); const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 for (const b of document.querySelectorAll('[data-export]')) b.onclick=()=>{if(!latest)return;const ext=b.dataset.export;download(`mooncam.${ext}`,ext==='json'?JSON.stringify(latest,null,2):latest.result[ext],ext==='svg'?'image/svg+xml':'text/plain');};
-$('save-input').onclick=()=>{try{download('mooncam-input.json',JSON.stringify(configuration('analyze'),null,2));}catch(e){setStatus(e.message,true);}};
+$('save-input').onclick=()=>{try{download('mooncam-input.json',JSON.stringify(latest?.input || configuration('analyze'),null,2));}catch(e){setStatus(e.message,true);}};
 $('analyze').onclick=()=>calculate('analyze');$('search').onclick=()=>calculate('search');$('phase').oninput=phase;$('trace').onchange=chart;
 async function preset() {
   try {

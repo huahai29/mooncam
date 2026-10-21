@@ -9,6 +9,8 @@ test('workshop produces locally feasible geometry and complete exports', () => {
   assert.equal(r.ok, true);
   assert.equal(r.result.sampled_local_feasible, true);
   assert.equal(r.result.jerk_jumps, 0);
+  assert.deepEqual(r.input, example('workshop'));
+  assert.equal(JSON.parse(run(JSON.stringify(r.input))).result.max_pressure_deg, r.result.max_pressure_deg);
   assert.equal(r.result.points.length, 721);
   assert.match(r.result.csv, /pressure_rad/);
   assert.match(r.result.dxf, /LWPOLYLINE/);
@@ -19,6 +21,7 @@ test('small radius fails pressure constraints and bounded search finds a candida
   assert.equal(r.ok, true);
   assert.equal(r.result.sampled_local_feasible, true);
   assert.equal(r.grid_step_mm, 1);
+  assert.deepEqual(r.input, example('size-search'));
 });
 test('public boundary rejects unknown fields, fractional resolution and malformed programs', () => {
   for (const change of [{surprise: 1}, {resolution: 36.5}, {rpm: 0}, {units:'in'}, {action:'bogus'}, {segments:[]}, {offset_mm:1000}]) {

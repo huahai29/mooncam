@@ -18,11 +18,12 @@ pub fn svg(points : Array[CamPoint]) -> String {
   let mut extent = 1.0
   let path = StringBuilder()
   for c in points {
+    let roller = @math.hypot(c.pitch_x - c.x, c.pitch_y - c.y)
     extent = extent
       .max(c.x.abs())
       .max(c.y.abs())
-      .max(c.pitch_x.abs())
-      .max(c.pitch_y.abs())
+      .max(c.pitch_x.abs() + roller)
+      .max(c.pitch_y.abs() + roller)
     path.write_string("\{c.x},\{-c.y} ")
   }
   let margin = extent * 1.15

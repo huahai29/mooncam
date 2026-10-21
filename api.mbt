@@ -172,7 +172,11 @@ pub fn run_json(input : String) -> String {
           offset,
         }
         let a = checked(analyze(p, g, resolution, pressure, omega))
-        { "ok": true, "result": report(a, g, omega, resolution) }
+        {
+          "ok": true,
+          "input": value,
+          "result": report(a, g, omega, resolution),
+        }
       }
       "search" => {
         let s = obj(required(f, "search"), ["lower_mm", "upper_mm", "intervals"])
@@ -191,6 +195,7 @@ pub fn run_json(input : String) -> String {
         )
         {
           "ok": true,
+          "input": value,
           "tested": Json(found.tested),
           "grid_step_mm": Json(found.grid_step),
           "search_scope": "First feasible increasing-grid candidate, verified on a doubled angular mesh; not a global minimum.",
