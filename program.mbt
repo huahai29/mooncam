@@ -58,12 +58,21 @@ pub fn evaluate(p : Program, theta : Double) -> Result[Motion, String] {
     if t < begin + seg.angle || i == p.segments.length() - 1 {
       let u = ((t - begin) / seg.angle).clamp(min=0.0, max=1.0)
       let n = normalized(seg.law, u).unwrap()
-      return Ok({
+      let value : Motion = {
         s: height + seg.lift * n.s,
         v: seg.lift * n.v / seg.angle,
         a: seg.lift * n.a / (seg.angle * seg.angle),
         j: seg.lift * n.j / (seg.angle * seg.angle * seg.angle),
-      })
+      }
+      if !finite(value.s) ||
+        !finite(value.v) ||
+        !finite(value.a) ||
+        !finite(value.j) {
+        return Err(
+          "angular derivatives overflow; revise segment lengths or angles",
+        )
+      }
+      return Ok(value)
     }
     begin = begin + seg.angle
     height = height + seg.lift

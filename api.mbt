@@ -134,6 +134,7 @@ fn report(
     "max_acceleration_mm_s2": Json(a.max_acceleration),
     "max_jerk_mm_s3": Json(a.max_jerk),
     "jerk_jumps": Json(a.jerk_jumps),
+    "sampled_profile_crossings": Json(profile_crossings(a.points).unwrap_or(-1)),
     "scope": "Sampled local kinematic and geometric checks; no global collision or strength certification.",
     "points": Json(pts),
     "csv": csv(a.points),
