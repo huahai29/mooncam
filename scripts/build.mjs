@@ -1,0 +1,10 @@
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const root = fileURLToPath(new URL('../', import.meta.url));
+const result = spawnSync(process.env.MOON || 'moon', ['build', '--target', 'js', '--release'], { cwd: root, stdio: 'inherit', shell: false });
+if (result.error) throw new Error('MoonBit toolchain unavailable. Install MoonBit and put moon on PATH.');
+if (result.status !== 0) process.exit(result.status || 1);
+mkdirSync(new URL('../web/', import.meta.url), { recursive: true });
+copyFileSync(new URL('../_build/js/release/build/bridge/bridge.js', import.meta.url), new URL('../web/engine.js', import.meta.url));
+console.log('Built web/engine.js from MoonBit.');

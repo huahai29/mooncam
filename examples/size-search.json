@@ -1,0 +1,37 @@
+{
+  "action": "search",
+  "units": "mm",
+  "base_radius_mm": 40,
+  "roller_radius_mm": 4,
+  "offset_mm": 0,
+  "rpm": 60,
+  "resolution": 360,
+  "pressure_limit_deg": 30,
+  "segments": [
+    {
+      "angle_deg": 90,
+      "lift_mm": 20,
+      "law": "4567"
+    },
+    {
+      "angle_deg": 90,
+      "lift_mm": 0,
+      "law": "4567"
+    },
+    {
+      "angle_deg": 90,
+      "lift_mm": -20,
+      "law": "4567"
+    },
+    {
+      "angle_deg": 90,
+      "lift_mm": 0,
+      "law": "4567"
+    }
+  ],
+  "search": {
+    "lower_mm": 5,
+    "upper_mm": 100,
+    "intervals": 95
+  }
+}

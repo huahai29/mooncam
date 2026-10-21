@@ -1,0 +1,13 @@
+{
+  "name": "mooncam",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Node host and browser shell for the MoonBit MoonCam library",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test:integration": "node --test tests/integration.test.mjs",
+    "demo": "node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop",
+    "serve": "node scripts/serve.mjs"
+  }
+}
