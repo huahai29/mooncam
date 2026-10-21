@@ -6,6 +6,8 @@ pub fn analyze(Program, Geometry, Int, Double, Double) -> Result[Analysis, Strin
 
 pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
 
+pub fn crossing_report(Array[CamPoint]) -> Result[CrossingReport, String]
+
 pub fn csv(Array[CamPoint]) -> String
 
 pub fn dxf_mm(Array[CamPoint]) -> String
@@ -15,6 +17,10 @@ pub fn evaluate(Program, Double) -> Result[Motion, String]
 pub fn example_program(Law) -> Program
 
 pub fn finite(Double) -> Bool
+
+pub fn input_limit_bytes() -> Int
+
+pub fn measure(Program, Geometry, Int, Double, Double) -> Result[Metrics, String]
 
 pub fn normalized(Law, Double) -> Result[Motion, String]
 
@@ -26,7 +32,9 @@ pub fn run_json(String) -> String
 
 pub fn sample(Program, Geometry, Int) -> Result[Array[CamPoint], String]
 
-pub fn search_base(Program, Double, Double, Double, Double, Int, Int, Double, Double) -> Result[SearchResult, String]
+pub fn sampled_acceptance(Bool, CrossingCheck) -> Bool
+
+pub fn search_base(Program, Double, Double, Double, Double, Int, Int, Double, Double) -> Result[SearchResult, SearchError]
 
 pub fn svg(Array[CamPoint]) -> String
 
@@ -42,12 +50,15 @@ pub(all) struct Analysis {
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
-  undercut_angle : Double
+  min_offset_factor_angle : Double
   max_velocity : Double
   max_acceleration : Double
   max_jerk : Double
   jerk_jumps : Int
+  sampled_local_feasible : Bool
+  crossings : CrossingCheck
   sampled_feasible : Bool
+  nominal_resolution : Int
 }
 
 pub(all) struct CamPoint {
@@ -64,6 +75,17 @@ pub(all) struct CamPoint {
   offset_factor : Double
 }
 
+pub(all) enum CrossingCheck {
+  NotChecked
+  Checked(Int)
+  Failed(String)
+}
+
+pub(all) struct CrossingReport {
+  crossings : Int
+  pair_visits : Int
+}
+
 pub(all) struct Geometry {
   base_radius : Double
   roller_radius : Double
@@ -76,6 +98,20 @@ pub(all) enum Law {
   Polynomial4567
 }
 
+pub(all) struct Metrics {
+  max_pressure : Double
+  pressure_angle : Double
+  min_offset_factor : Double
+  min_offset_factor_angle : Double
+  max_velocity : Double
+  max_acceleration : Double
+  max_jerk : Double
+  jerk_jumps : Int
+  sampled_local_feasible : Bool
+  sample_count : Int
+  nominal_resolution : Int
+}
+
 pub(all) struct Motion {
   s : Double
   v : Double
@@ -85,6 +121,14 @@ pub(all) struct Motion {
 
 pub struct Program {
   segments : Array[Segment]
+  starts : Array[Double]
+  heights : Array[Double]
+}
+
+pub(all) enum SearchError {
+  InvalidInput(String)
+  NumericalFailure(String)
+  NoCandidate(Int)
 }
 
 pub(all) struct SearchResult {

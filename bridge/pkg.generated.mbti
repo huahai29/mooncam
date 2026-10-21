@@ -2,6 +2,8 @@
 package "huahai29/mooncam/bridge"
 
 // Values
+pub fn input_limit_bytes() -> Int
+
 pub fn run(String) -> String
 
 // Errors

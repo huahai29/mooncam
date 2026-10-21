@@ -1,6 +1,6 @@
 {
   "name": "mooncam",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Node host and browser shell for the MoonBit MoonCam library",
@@ -10,7 +10,9 @@
     "demo": "node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop",
     "serve": "node scripts/serve.mjs",
     "test:oracle": "python tests/oracle.py",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:dxf": "python tests/dxf_interop.py",
+    "benchmark": "node tests/benchmark.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"

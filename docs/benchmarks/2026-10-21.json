@@ -1,0 +1,43 @@
+{
+  "method": "Same process; 5 warm-ups and 15 interleaved samples; median milliseconds. Full output requests compare computation at similar output coverage. Not a worst-case complexity claim.",
+  "workloads": {
+    "analyze720": {
+      "full_median_ms": 4.1451000000000136,
+      "full_bytes": 432836,
+      "default_bytes": 239323,
+      "summary_bytes": 835,
+      "baseline_median_ms": 5.247099999999989,
+      "full_speedup": 1.2658560710236115,
+      "baseline_bytes": 434187
+    },
+    "analyze4000": {
+      "full_median_ms": 33.00500000000011,
+      "full_bytes": 2398973,
+      "default_bytes": 1327000,
+      "summary_bytes": 842,
+      "baseline_median_ms": 77.19179999999983,
+      "full_speedup": 2.338791092258736,
+      "baseline_bytes": 2409018
+    },
+    "search": {
+      "full_median_ms": 4.040199999999913,
+      "full_bytes": 430866,
+      "default_bytes": 238400,
+      "summary_bytes": 986,
+      "baseline_median_ms": 7.027900000000045,
+      "full_speedup": 1.7394930944013156,
+      "baseline_bytes": 434097
+    },
+    "segments128": {
+      "full_median_ms": 4.120199999999841,
+      "full_bytes": 512904,
+      "default_bytes": 277577,
+      "summary_bytes": 843,
+      "baseline_median_ms": 6.067000000000007,
+      "full_speedup": 1.4725013348867146,
+      "baseline_bytes": 522015
+    }
+  },
+  "baseline_commit": "2fb447631ae67e35d87d8d23903e58509a27799a",
+  "platform": "Windows, Node.js v24.18.0, MoonBit v0.10.15"
+}

@@ -41,9 +41,9 @@ node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop
 npm run serve
 ```
 
-访问 `http://127.0.0.1:4173/`。运行上述流程无需安装 npm 开发依赖。输出目录包含 `profile.svg`、`profile.csv`、`profile.dxf`、`report.json`。
+访问 `http://127.0.0.1:4173/`。运行上述流程无需安装 npm 开发依赖。输出目录包含 `profile.svg`、`profile.csv`、`profile.dxf`、`report.json`、`input.json`。
 
-CLI 退出码：`0` 表示采样局部约束满足，`2` 表示不满足，`1` 表示输入或运行错误。退出码不包含全局无干涉和制造认证。
+CLI 退出码：`0` 表示局部条件通过且严格折线交叉检查完成、未发现交叉；`2` 表示采样检查拒绝；`3` 表示搜索未找到候选；`4` 表示检查未完成；`1` 表示输入或运行错误。通过采样检查不等于连续轮廓全局无干涉或制造认证。
 
 ## 四个可运行案例
 
@@ -104,6 +104,8 @@ moon test --target js
 npm run build
 npm run test:integration
 python tests/oracle.py
+python -m pip install -r requirements-test.txt
+python tests/dxf_interop.py
 npm ci
 npx playwright install chromium
 npm run test:browser
@@ -115,7 +117,7 @@ npm run test:browser
 
 ## 适用边界
 
-`sampled_local_feasible` 只表示当前采样点满足压力角与局部偏置条件。采样折线交叉另行报告；零交叉不代表连续轮廓没有相切、采样间回环或非局部滚轮干涉。应提高分辨率检查收敛；采样不能替代连续极值求解。
+`sampled_local_feasible` 只表示局部条件；`sampled_feasible` 还要求严格折线交叉检查完成且计数为零。`crossing_check` 明确区分完成、失败和未检查。零交叉不代表连续轮廓没有相切、采样间回环或非局部滚轮干涉。应提高分辨率检查收敛；采样不能替代连续极值求解。
 
 当前不包含强度、载荷、弹簧预紧、磨损、弹性和公差分析。DXF 是离散轮廓交换文件，未承诺可直接加工。详见 [算法与适用范围](docs/算法与适用范围.md)。
 
@@ -124,3 +126,9 @@ npm run test:browser
 按公开机械运动学公式独立编写，未复制第三方凸轮实现代码。参考项目与来源见 [参考与来源](THIRD_PARTY_NOTICES.md)，采用 [MIT 许可证](LICENSE)。已有数学方法不作为原创理论申报；项目贡献是 MoonBit 实现、组合接口、验证和工作流。
 
 [后续改进清单](docs/后续改进清单.md) 记录十项尚未实现的能力。
+
+## 0.2 版本接口变化
+
+JSON schema 升至 2。默认只返回点数据和摘要；通过 `outputs` 选择 points / csv / svg / dxf，空数组仅返回摘要，`include_input` 控制输入回显。CLI 自动按需请求格式，报告只保存摘要与文件引用。`resolution` 改为 `sampling.nominal_resolution`，实际点数另行报告；根切角字段改名为 `min_offset_factor_angle`。旧版本调用方需按 [输入输出说明](docs/输入输出说明.md) 迁移。
+
+本次 14 项核查、正确性测试、性能实测与尚未覆盖的边界见 [优化核查记录](docs/优化核查记录.md)。

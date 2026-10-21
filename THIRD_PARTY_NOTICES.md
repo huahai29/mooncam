@@ -19,6 +19,7 @@ MoonCam 按公开机械运动学与微分几何公式独立编写，当前未复
 - MoonBit 工具链和 moonbitlang/core：编译、数学及 JSON 基础能力，遵循各自许可证。
 - Node.js：可选 CLI 和网页宿主。
 - Playwright：Apache-2.0，仅用于浏览器开发测试。
-- Python 标准库：仅用于独立验证。
+- Python 标准库：用于独立数值验证。
+- [ezdxf](https://github.com/mozman/ezdxf)：MIT，仅用于测试读取导出文件；版本固定在 requirements-test.txt，生产运行不依赖它。
 
 本仓库手写代码使用 MIT 许可证。编译产物在本地或 CI 生成。
