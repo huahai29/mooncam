@@ -19,7 +19,8 @@ pub(all) struct SearchResult {
 ///| Reuse geometry-independent motion meshes; reject candidates by scalar metrics.
 
 ///|
-/// Only locally passing candidates allocate coordinates for topology verification.
+/// The coarse pass allocates no coordinates; the fine pass returns the metrics and
+/// the coordinates that topology verification consumes.
 pub fn search_base(
   p : Program,
   roller_radius : Double,
@@ -79,17 +80,17 @@ pub fn search_base(
     if !a.metrics.sampled_local_feasible {
       continue
     }
-    let b = match scan_mesh(fine, g, pressure_limit, omega, false) {
+    // A retained scan returns the same metrics as a metrics-only scan, so the
+    // fine mesh is scanned once. Trade-off: a candidate that passes the coarse
+    // filter but fails the fine one now builds coordinates it discards.
+    let b = match scan_mesh(fine, g, pressure_limit, omega, true) {
       Ok(a) => a
       Err(e) => return Err(NumericalFailure(e))
     }
     if !b.metrics.sampled_local_feasible {
       continue
     }
-    let complete = match scan_mesh(fine, g, pressure_limit, omega, true) {
-      Ok(a) => finish_scan(a)
-      Err(e) => return Err(NumericalFailure(e))
-    }
+    let complete = finish_scan(b)
     match complete.crossings {
       Failed(e) => return Err(NumericalFailure(e))
       _ => ()
