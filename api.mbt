@@ -69,6 +69,18 @@ fn[T] checked(value : Result[T, String]) -> T raise InputError {
 }
 
 ///|
+fn checked_search(
+  value : Result[SearchResult, SearchError],
+) -> SearchResult raise InputError {
+  match value {
+    Ok(v) => v
+    Err(InvalidInput(e)) => raise InputError(e)
+    Err(NumericalFailure(e)) => raise InputError(e)
+    Err(NoCandidate(_)) => raise InputError("no feasible grid candidate found")
+  }
+}
+
+///|
 fn decode_program(value : Json) -> Program raise InputError {
   guard value is Array(items) else {
     raise InputError("segments must be an array")
@@ -180,7 +192,7 @@ pub fn run_json(input : String) -> String {
       }
       "search" => {
         let s = obj(required(f, "search"), ["lower_mm", "upper_mm", "intervals"])
-        let found = checked(
+        let found = checked_search(
           search_base(
             p,
             roller,
