@@ -2,12 +2,13 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, sep, extname } from 'node:path';
-const root=fileURLToPath(new URL('../',import.meta.url));
+const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const types={'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml'};
 createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');
-  const pathname=decodeURIComponent(url.pathname==='/'?'/web/index.html':url.pathname);
+  if(url.pathname==='/'){res.writeHead(302,{Location:'/web/'});res.end();return;}
+  const pathname=decodeURIComponent(url.pathname==='/web/'?'/web/index.html':url.pathname);
   const path=resolve(root,'.'+pathname);
   if(!path.startsWith(root+sep)||pathname.split('/').some(part=>part.startsWith('.'))){res.writeHead(403);res.end();return;}
   const content=await readFile(path);
