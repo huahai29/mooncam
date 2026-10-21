@@ -81,8 +81,8 @@ pub fn search_base(
       continue
     }
     // A retained scan returns the same metrics as a metrics-only scan, so the
-    // fine mesh is scanned once. Trade-off: a candidate that passes the coarse
-    // filter but fails the fine one now builds coordinates it discards.
+    // fine mesh is scanned once. The cost is real: a candidate that passes the
+    // coarse filter but fails the fine one builds coordinates it discards.
     let b = match scan_mesh(fine, g, pressure_limit, omega, true) {
       Ok(a) => a
       Err(e) => return Err(NumericalFailure(e))
