@@ -1,0 +1,10 @@
+import {
+  "huahai29/mooncam" @cam,
+}
+
+pkgtype(kind: "executable")
+
+options(
+  supported_targets: "js",
+  link: { "js": { "exports": [ "run" ], "format": "esm" } },
+)
