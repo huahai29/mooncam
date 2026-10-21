@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {run} from '../web/engine.js';
-const r=JSON.parse(run(readFileSync(new URL('../examples/workshop.json',import.meta.url),'utf8'))).result;
+const r=JSON.parse(run(JSON.stringify({...JSON.parse(readFileSync(new URL('../examples/workshop.json',import.meta.url),'utf8')),outputs:['points','csv','svg','dxf']}))).result;
 test('DXF group-pair parser recovers closed mm polyline matching profile',()=>{
  const lines=r.dxf.trim().split('\n');assert.equal(lines.length%2,0);
  const pairs=[];for(let i=0;i<lines.length;i+=2)pairs.push([lines[i],lines[i+1]]);

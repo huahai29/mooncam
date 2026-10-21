@@ -6,5 +6,5 @@ pkgtype(kind: "executable")
 
 options(
   supported_targets: "js",
-  link: { "js": { "exports": [ "run" ], "format": "esm" } },
+  link: { "js": { "exports": [ "run", "input_limit_bytes" ], "format": "esm" } },
 )

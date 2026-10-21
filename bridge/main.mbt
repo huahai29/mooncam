@@ -7,3 +7,8 @@ pub fn run(input : String) -> String {
 fn main {
   ()
 }
+
+///|
+pub fn input_limit_bytes() -> Int32 {
+  @cam.input_limit_bytes()
+}

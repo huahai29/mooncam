@@ -6,7 +6,7 @@
   "description": "Node host and browser shell for the MoonBit MoonCam library",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test:integration": "node --test tests/integration.test.mjs tests/export.test.mjs",
+    "test:integration": "node --test tests/integration.test.mjs tests/export.test.mjs tests/api-contract.test.mjs",
     "demo": "node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop",
     "serve": "node scripts/serve.mjs",
     "test:oracle": "python tests/oracle.py",

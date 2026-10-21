@@ -70,6 +70,7 @@ fn zero_height(g : Geometry) -> Double {
 /// No trigonometry or CamPoint allocation is required for scalar checks.
 priv struct LocalGeometry {
   q : Double
+  speed : Double
   pressure : Double
   curvature : Double
   factor : Double
@@ -89,7 +90,7 @@ fn local_geometry(
   if !finite(q) || !finite(k) || !finite(factor) || speed <= 0.0 {
     return Err("non-finite or singular contact geometry")
   }
-  Ok({ q, pressure: @math.atan2(d, q), curvature: k, factor, })
+  Ok({ q, speed, pressure: @math.atan2(d, q), curvature: k, factor, })
 }
 
 ///|
@@ -121,7 +122,7 @@ fn contact_local(
   let py = q * cs - g.offset * sn
   let dx = q * cs + (m.v - g.offset) * sn
   let dy = (m.v - g.offset) * cs - q * sn
-  let speed = @math.hypot(q, m.v - g.offset)
+  let speed = geom.speed
   let nx = -dy / speed
   let ny = dx / speed
   let x = px - g.roller_radius * nx

@@ -71,12 +71,15 @@ fn[T] checked(value : Result[T, String]) -> T raise InputError {
 ///|
 fn checked_search(
   value : Result[SearchResult, SearchError],
-) -> SearchResult raise InputError {
+) -> SearchResult raise {
   match value {
     Ok(v) => v
     Err(InvalidInput(e)) => raise InputError(e)
-    Err(NumericalFailure(e)) => raise InputError(e)
-    Err(NoCandidate(_)) => raise InputError("no feasible grid candidate found")
+    Err(NumericalFailure(e)) => raise RequestError("calculation_failed", e)
+    Err(NoCandidate(_)) =>
+      raise RequestError(
+        "no_candidate", "no sampled-accepted grid candidate found; this is not proof of continuous infeasibility",
+      )
   }
 }
 
@@ -107,66 +110,160 @@ fn decode_program(value : Json) -> Program raise InputError {
 }
 
 ///|
-fn report(
-  a : Analysis,
-  g : Geometry,
-  omega : Double,
-  resolution : Int32,
-) -> Json {
-  let pts = a.points.map(fn(c) {
-    {
-      "theta_rad": Json(c.theta),
-      "lift_mm": Json(c.motion.s),
-      "velocity_mm_s": Json(c.motion.v * omega),
-      "acceleration_mm_s2": Json(c.motion.a * omega * omega),
-      "jerk_mm_s3": Json(c.motion.j * omega * omega * omega),
-      "pitch_x": Json(c.pitch_x),
-      "pitch_y": Json(c.pitch_y),
-      "x": Json(c.x),
-      "y": Json(c.y),
-      "pressure_deg": Json(c.pressure * 180.0 / @math.PI),
-      "pitch_curvature": Json(c.curvature),
-      "offset_factor": Json(c.offset_factor),
+/// Shared wire limit in UTF-8 bytes, exported to CLI hosts.
+pub fn input_limit_bytes() -> Int32 {
+  200000
+}
+
+///|
+priv suberror RequestError {
+  RequestError(String, String)
+}
+
+///|
+fn selected_outputs(f : Map[String, Json]) -> Array[String] raise InputError {
+  let choices : Array[String] = []
+  let value = f.get("outputs").unwrap_or(Json(["points"]))
+  guard value is Array(items) else {
+    raise InputError("outputs must be an array")
+  }
+  for item in items {
+    guard item is String(name) else {
+      raise InputError("output names must be strings")
     }
-  })
-  {
-    "schema_version": 1,
-    "units": "mm",
-    "sampled_local_feasible": Json(a.sampled_feasible),
-    "base_radius_mm": Json(g.base_radius),
-    "roller_radius_mm": Json(g.roller_radius),
-    "offset_mm": Json(g.offset),
-    "omega_rad_s": Json(omega),
-    "resolution": Json(resolution),
-    "sample_count": Json(a.points.length()),
-    "max_pressure_deg": Json(a.max_pressure * 180.0 / @math.PI),
-    "worst_pressure_angle_deg": Json(a.pressure_angle * 180.0 / @math.PI),
-    "min_offset_factor": Json(a.min_offset_factor),
-    "max_velocity_mm_s": Json(a.max_velocity),
-    "max_acceleration_mm_s2": Json(a.max_acceleration),
-    "max_jerk_mm_s3": Json(a.max_jerk),
-    "jerk_jumps": Json(a.jerk_jumps),
-    "sampled_profile_crossings": Json(profile_crossings(a.points).unwrap_or(-1)),
-    "scope": "Sampled local kinematic and geometric checks; no global collision or strength certification.",
-    "points": Json(pts),
-    "csv": csv(a.points),
-    "svg": svg(a.points),
-    "dxf": dxf_mm(a.points),
+    if !["points", "csv", "svg", "dxf"].contains(name) || choices.contains(name) {
+      raise InputError("unknown or duplicate output: " + name)
+    }
+    choices.push(name)
+  }
+  choices
+}
+
+///|
+fn error_json(code : String, message : String) -> String {
+  let err : Json = {
+    "ok": false,
+    "schema_version": 2,
+    "error_code": code,
+    "error": message,
+  }
+  err.stringify()
+}
+
+///|
+fn crossing_json(check : CrossingCheck) -> Json {
+  match check {
+    Checked(n) => { "status": "complete", "count": Json(n) }
+    NotChecked => { "status": "not_checked", "count": Json(null) }
+    Failed(message) =>
+      { "status": "failed", "count": Json(null), "error": message }
   }
 }
 
 ///|
-/// JSON entry point shared by Node CLI and browser. All numeric work is MoonBit.
+/// Summaries are always present; heavy outputs are generated only on request.
+fn report(
+  a : Analysis,
+  g : Geometry,
+  omega : Double,
+  outputs : Array[String],
+) -> Json {
+  let state = match a.crossings {
+    Checked(_) =>
+      if a.sampled_feasible {
+        "accepted_sampled"
+      } else {
+        "rejected"
+      }
+    _ => "incomplete"
+  }
+  let fields : Map[String, Json] = {
+    "schema_version": Json(2),
+    "units": Json("mm"),
+    "state": Json(state),
+    "sampled_local_feasible": Json(a.sampled_local_feasible),
+    "sampled_feasible": Json(a.sampled_feasible),
+    "crossing_check": crossing_json(a.crossings),
+    "base_radius_mm": Json(g.base_radius),
+    "roller_radius_mm": Json(g.roller_radius),
+    "offset_mm": Json(g.offset),
+    "omega_rad_s": Json(omega),
+    "sample_count": Json(a.points.length()),
+    "sampling": Json({
+      "nominal_resolution": Json(a.nominal_resolution),
+      "actual_intervals": Json(a.points.length() - 1),
+      "sample_count": Json(a.points.length()),
+      "preserves_segment_boundaries": true,
+    }),
+    "max_pressure_deg": Json(a.max_pressure * 180.0 / @math.PI),
+    "worst_pressure_angle_deg": Json(a.pressure_angle * 180.0 / @math.PI),
+    "min_offset_factor": Json(a.min_offset_factor),
+    "min_offset_factor_angle_rad": Json(a.min_offset_factor_angle),
+    "max_velocity_mm_s": Json(a.max_velocity),
+    "max_acceleration_mm_s2": Json(a.max_acceleration),
+    "max_jerk_mm_s3": Json(a.max_jerk),
+    "jerk_jumps": Json(a.jerk_jumps),
+    "scope": Json(
+      "Sampled local constraints plus strict polyline crossing check; no continuous or global collision certification.",
+    ),
+  }
+  if outputs.contains("points") {
+    fields.set(
+      "points",
+      Json(
+        a.points.map(fn(c) {
+          {
+            "theta_rad": Json(c.theta),
+            "lift_mm": Json(c.motion.s),
+            "velocity_mm_s": Json(c.motion.v * omega),
+            "acceleration_mm_s2": Json(c.motion.a * omega * omega),
+            "jerk_mm_s3": Json(c.motion.j * omega * omega * omega),
+            "pitch_x": Json(c.pitch_x),
+            "pitch_y": Json(c.pitch_y),
+            "x": Json(c.x),
+            "y": Json(c.y),
+            "pressure_deg": Json(c.pressure * 180.0 / @math.PI),
+            "pitch_curvature": Json(c.curvature),
+            "offset_factor": Json(c.offset_factor),
+          }
+        }),
+      ),
+    )
+  }
+  if outputs.contains("csv") {
+    fields.set("csv", Json(csv(a.points)))
+  }
+  if outputs.contains("svg") {
+    fields.set("svg", Json(svg(a.points)))
+  }
+  if outputs.contains("dxf") {
+    fields.set("dxf", Json(dxf_mm(a.points)))
+  }
+  Json(fields)
+}
+
+///|
+/// Schema v2: byte-bounded input, selected outputs, typed errors and check states.
 pub fn run_json(input : String) -> String {
   try {
-    if input.length() > 200000 {
-      raise InputError("input exceeds 200000 characters")
+    if input.length() > input_limit_bytes() ||
+      @utf8.encode(input).length() > input_limit_bytes() {
+      raise RequestError("input_too_large", "input exceeds 200000 UTF-8 bytes")
     }
-    let value = @json.parse(input)
+    let value = @json.parse(input) catch {
+      _ => raise RequestError("invalid_json", "invalid JSON")
+    }
     let f = obj(value, [
       "action", "units", "segments", "base_radius_mm", "roller_radius_mm", "offset_mm",
-      "rpm", "resolution", "pressure_limit_deg", "search",
+      "rpm", "resolution", "pressure_limit_deg", "search", "outputs", "include_input",
     ])
+    let outputs = selected_outputs(f)
+    let include_input = match f.get("include_input") {
+      None => false
+      Some(True) => true
+      Some(False) => false
+      _ => raise InputError("include_input must be boolean")
+    }
     if text(f, "units") != "mm" {
       raise InputError("JSON interface requires mm units")
     }
@@ -186,8 +283,8 @@ pub fn run_json(input : String) -> String {
         let a = checked(analyze(p, g, resolution, pressure, omega))
         {
           "ok": true,
-          "input": value,
-          "result": report(a, g, omega, resolution),
+          "schema_version": 2,
+          "result": report(a, g, omega, outputs),
         }
       }
       "search" => {
@@ -207,29 +304,25 @@ pub fn run_json(input : String) -> String {
         )
         {
           "ok": true,
-          "input": value,
+          "schema_version": 2,
           "tested": Json(found.tested),
           "grid_step_mm": Json(found.grid_step),
-          "search_scope": "First feasible increasing-grid candidate, verified on a doubled angular mesh; not a global minimum.",
-          "result": report(
-            found.analysis,
-            found.geometry,
-            omega,
-            found.verification_resolution,
-          ),
+          "search_scope": "First sampled-accepted grid candidate; topology completed on the fine mesh; not a continuous optimum.",
+          "result": report(found.analysis, found.geometry, omega, outputs),
         }
       }
       _ => raise InputError("action must be analyze or search")
     }
+    if include_input {
+      match result {
+        Object(fields) => fields.set("input", value)
+        _ => ()
+      }
+    }
     result.stringify()
   } catch {
-    InputError(message) => {
-      let err : Json = { "ok": false, "error": message }
-      err.stringify()
-    }
-    _ => {
-      let err : Json = { "ok": false, "error": "invalid JSON" }
-      err.stringify()
-    }
+    InputError(message) => error_json("invalid_input", message)
+    RequestError(code, message) => error_json(code, message)
+    _ => error_json("internal_error", "unexpected calculation failure")
   }
 }
