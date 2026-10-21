@@ -56,25 +56,78 @@ pub fn contact(
     Err(e) => return Err(e)
     Ok(m) => m
   }
+  contact_prepared(g, zero_height(g), theta, m)
+}
+
+///|
+/// Cached once per geometry, shared by sampling and metrics-only search.
+fn zero_height(g : Geometry) -> Double {
   let r = g.base_radius + g.roller_radius
-  let q = ((r - g.offset) * (r + g.offset)).sqrt() + m.s
+  ((r - g.offset) * (r + g.offset)).sqrt()
+}
+
+///|
+/// No trigonometry or CamPoint allocation is required for scalar checks.
+priv struct LocalGeometry {
+  q : Double
+  pressure : Double
+  curvature : Double
+  factor : Double
+}
+
+///|
+fn local_geometry(
+  g : Geometry,
+  q0 : Double,
+  m : Motion,
+) -> Result[LocalGeometry, String] {
+  let q = q0 + m.s
+  let d = m.v - g.offset
+  let speed = @math.hypot(q, d)
+  let k = (q * (q - m.a) + d * (2.0 * m.v - g.offset)) / (speed * speed * speed)
+  let factor = 1.0 - g.roller_radius * k
+  if !finite(q) || !finite(k) || !finite(factor) || speed <= 0.0 {
+    return Err("non-finite or singular contact geometry")
+  }
+  Ok({ q, pressure: @math.atan2(d, q), curvature: k, factor, })
+}
+
+///|
+fn contact_prepared(
+  g : Geometry,
+  q0 : Double,
+  theta : Double,
+  m : Motion,
+) -> Result[CamPoint, String] {
+  let geom = match local_geometry(g, q0, m) {
+    Ok(v) => v
+    Err(e) => return Err(e)
+  }
+  contact_local(g, theta, m, geom)
+}
+
+///|
+/// Construct full coordinates only for retained output points.
+fn contact_local(
+  g : Geometry,
+  theta : Double,
+  m : Motion,
+  geom : LocalGeometry,
+) -> Result[CamPoint, String] {
+  let q = geom.q
   let sn = @math.sin(theta)
   let cs = @math.cos(theta)
   let px = q * sn + g.offset * cs
   let py = q * cs - g.offset * sn
-  let dx = m.v * sn + q * cs - g.offset * sn
-  let dy = m.v * cs - q * sn - g.offset * cs
-  let ddx = m.a * sn + 2.0 * m.v * cs - q * sn - g.offset * cs
-  let ddy = m.a * cs - 2.0 * m.v * sn - q * cs + g.offset * sn
-  let speed = @math.hypot(dx, dy)
+  let dx = q * cs + (m.v - g.offset) * sn
+  let dy = (m.v - g.offset) * cs - q * sn
+  let speed = @math.hypot(q, m.v - g.offset)
   let nx = -dy / speed
   let ny = dx / speed
-  let k = (dy * ddx - dx * ddy) / (speed * speed * speed)
   let x = px - g.roller_radius * nx
   let y = py - g.roller_radius * ny
-  let factor = 1.0 - g.roller_radius * k
-  if !finite(x) || !finite(y) || !finite(k) || !finite(factor) || speed <= 0.0 {
-    return Err("non-finite or singular contact geometry")
+  if !finite(x) || !finite(y) {
+    return Err("non-finite contact coordinates")
   }
   Ok({
     theta,
@@ -85,8 +138,8 @@ pub fn contact(
     y,
     normal_x: nx,
     normal_y: ny,
-    pressure: @math.atan2(m.v - g.offset, q),
-    curvature: k,
-    offset_factor: factor,
+    pressure: geom.pressure,
+    curvature: geom.curvature,
+    offset_factor: geom.factor,
   })
 }
