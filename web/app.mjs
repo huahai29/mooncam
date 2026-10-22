@@ -6,12 +6,18 @@ function busy(value) { for (const b of buttons) b.disabled = value; }
 function setStatus(message, error = false) { $('status').textContent = message; $('status').className = error ? 'bad' : 'good'; }
 function receive(data, generation) {
   if (generation !== epoch) return;
-  if (data.ready) { ready = true; busy(false); setStatus(degraded ? '兼容模式：MoonBit 引擎在主线程运行，计算期间页面可能暂停响应。' : '计算引擎已就绪'); return; }
+  if (data.ready) {
+    const limits = data.contract.limits;
+    $('resolution').min = limits.resolution_min; $('resolution').max = limits.json_resolution_max;
+    $('intervals').max = limits.search_intervals_max;
+    $('base').min = limits.base_radius_min; $('base').max = limits.geometry_length_max;
+    $('roller').max = limits.geometry_length_max;
+    ready = true; busy(false); setStatus(degraded ? '兼容模式：MoonBit 引擎在主线程运行，计算期间页面可能暂停响应。' : '计算引擎已就绪'); return; }
   if (!pending || data.id !== pending.id) return;
   const task = pending; pending = undefined;
   clearTimeout(timer); busy(false);
   for (const b of document.querySelectorAll('[data-export]')) b.disabled = !latest;
-  if (data.error || !data.response?.ok) { setStatus(data.error || data.response.error, true); return; }
+  if (data.error || !data.response?.ok) { setStatus(data.error || `${data.response.field ? data.response.field + '：' : ''}${data.response.error}`, true); return; }
   if (task.kind === 'export') { download(`mooncam.${task.format}`, data.response.content, task.format === 'svg' ? 'image/svg+xml' : 'text/plain'); return; }
   latest = data.response; render();
   setStatus(latest.result.sampled_feasible ? '采样局部约束通过，轮廓交叉检查完成且未发现交叉。' : '采样约束不满足、发现轮廓交叉或检查无法确定，请查看各项状态。', !latest.result.sampled_feasible);
@@ -28,7 +34,7 @@ async function fallback(generation) {
       try { receive({id: task.id, response: JSON.parse(task.kind === 'export' ? engine.export_profile(task.format) : engine.run(task.input))}, generation); }
       catch (error) { receive({id: task.id, error: error.message}, generation); }
     }); }, terminate() {}};
-    receive({ready: true}, generation);
+    receive({ready: true, contract: JSON.parse(engine.contract())}, generation);
   } catch (error) { if (generation === epoch) setStatus(`引擎加载失败：${error.message}。请执行 npm run build 并通过 HTTP 服务访问。`, true); }
 }
 function startWorker() {

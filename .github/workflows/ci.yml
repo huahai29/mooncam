@@ -39,6 +39,7 @@ jobs:
       - name: 构建、导出与独立验证
         run: |
           npm run build
+          npm run docs:check
           npm run test:integration
           python tests/oracle.py
           python -m pip install -r requirements-test.txt

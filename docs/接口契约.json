@@ -1,0 +1,75 @@
+{
+  "crossing_states": [
+    "not_checked",
+    "complete",
+    "indeterminate",
+    "failed"
+  ],
+  "errors": [
+    {
+      "code": "invalid_json",
+      "exit_code": 1
+    },
+    {
+      "code": "invalid_input",
+      "exit_code": 1
+    },
+    {
+      "code": "input_too_large",
+      "exit_code": 1
+    },
+    {
+      "code": "calculation_failed",
+      "exit_code": 1
+    },
+    {
+      "code": "check_indeterminate",
+      "exit_code": 4
+    },
+    {
+      "code": "no_candidate",
+      "exit_code": 3
+    },
+    {
+      "code": "internal_error",
+      "exit_code": 1
+    },
+    {
+      "code": "no_result",
+      "exit_code": 1
+    }
+  ],
+  "limits": {
+    "base_radius_min": 0.000001,
+    "closure_relative_tolerance": 1e-10,
+    "coordinate_max": 1e+150,
+    "crossing_pair_budget": 4000000,
+    "geometry_length_max": 1000000,
+    "input_bytes_max": 200000,
+    "json_resolution_max": 4000,
+    "library_resolution_max": 20000,
+    "profile_points_max": 25000,
+    "profile_points_min": 4,
+    "resolution_min": 36,
+    "search_intervals_max": 256,
+    "search_refinement": 2,
+    "search_resolution_max": 2000,
+    "segment_angle_min": 0.000001,
+    "segments_max": 128
+  },
+  "result_states": [
+    {
+      "exit_code": 0,
+      "state": "accepted_sampled"
+    },
+    {
+      "exit_code": 2,
+      "state": "rejected"
+    },
+    {
+      "exit_code": 4,
+      "state": "incomplete"
+    }
+  ],
+  "schema_version": 2
+}

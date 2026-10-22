@@ -8,7 +8,14 @@ options(
   supported_targets: "js",
   link: {
     "js": {
-      "exports": [ "run", "input_limit_bytes", "export_profile" ],
+      "exports": [
+        "run",
+        "input_limit_bytes",
+        "export_profile",
+        "contract",
+        "error_exit_code",
+        "result_exit_code",
+      ],
       "format": "esm",
     },
   },

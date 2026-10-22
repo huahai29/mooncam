@@ -8,11 +8,15 @@ pub fn checked_export(Array[CamPoint], String) -> Result[String, String]
 
 pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
 
+pub fn contract_json() -> String
+
 pub fn crossing_report(Array[CamPoint]) -> Result[CrossingReport, String]
 
 pub fn csv(Array[CamPoint]) -> String
 
 pub fn dxf_mm(Array[CamPoint]) -> String
+
+pub fn error_exit_code(String) -> Int
 
 pub fn evaluate(Program, Double) -> Result[Motion, String]
 
@@ -29,6 +33,8 @@ pub fn normalized(Law, Double) -> Result[Motion, String]
 pub fn profile_crossings(Array[CamPoint]) -> Result[Int, String]
 
 pub fn program(Array[Segment]) -> Result[Program, String]
+
+pub fn result_exit_code(String) -> Int
 
 pub fn run_json(String) -> String
 
@@ -64,6 +70,7 @@ pub(all) struct Analysis {
   sampled_feasible : Bool
   nominal_resolution : Int
 }
+pub fn Analysis::state(Self) -> String
 
 pub(all) struct CamPoint {
   theta : Double
@@ -85,12 +92,26 @@ pub(all) enum CrossingCheck {
   Indeterminate(Int, Int)
   Failed(String)
 }
+pub fn CrossingCheck::status(Self) -> String
 
 pub(all) struct CrossingReport {
   crossings : Int
   pair_visits : Int
   uncertain_pairs : Int
 }
+
+pub(all) enum ErrorCode {
+  InvalidJson
+  InvalidRequest
+  InputTooLarge
+  CalculationFailed
+  CheckIndeterminate
+  NoCandidateFound
+  InternalError
+  NoResult
+}
+pub fn ErrorCode::code(Self) -> String
+pub fn ErrorCode::exit_code(Self) -> Int
 
 pub(all) struct Geometry {
   base_radius : Double

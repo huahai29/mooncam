@@ -29,11 +29,13 @@ pub fn validate_geometry(g : Geometry) -> Result[Unit, String] {
   if !finite(g.base_radius) || !finite(g.roller_radius) || !finite(g.offset) {
     return Err("geometry must be finite")
   }
-  if g.base_radius < 1.0e-6 ||
-    g.base_radius > 1.0e6 ||
+  if g.base_radius < Base_radius_min ||
+    g.base_radius > Geometry_length_max ||
     g.roller_radius <= 0.0 ||
-    g.roller_radius > 1.0e6 {
-    return Err("base radius must be in [1e-6, 1e6]; roller radius in (0, 1e6]")
+    g.roller_radius > Geometry_length_max {
+    return Err(
+      "base radius must be in [\{Base_radius_min}, \{Geometry_length_max}]; roller radius in (0, \{Geometry_length_max}]",
+    )
   }
   if g.offset.abs() >= g.base_radius + g.roller_radius {
     return Err("offset magnitude must be smaller than prime-circle radius")

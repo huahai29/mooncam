@@ -1,7 +1,4 @@
 ///|
-const Schema_version : Int32 = 2
-
-///|
 priv suberror InputError {
   InputError(String)
 }
@@ -9,6 +6,16 @@ priv suberror InputError {
 ///|
 priv suberror FieldError {
   FieldError(String, String)
+}
+
+///|
+/// Prefix nested field paths without parsing human-readable messages.
+fn[T] located(path : String, action : () -> T raise) -> T raise {
+  action() catch {
+    FieldError(field, message) => raise FieldError(path + "." + field, message)
+    InputError(message) => raise FieldError(path, message)
+    e => raise e
+  }
 }
 
 ///|
@@ -80,12 +87,12 @@ fn checked_search(
   match value {
     Ok(v) => v
     Err(InvalidInput(e)) => raise InputError(e)
-    Err(IndeterminateGeometry(e)) =>
-      raise RequestError("check_indeterminate", e)
-    Err(NumericalFailure(e)) => raise RequestError("calculation_failed", e)
+    Err(IndeterminateGeometry(e)) => raise RequestError(CheckIndeterminate, e)
+    Err(NumericalFailure(e)) => raise RequestError(CalculationFailed, e)
     Err(NoCandidate(_)) =>
       raise RequestError(
-        "no_candidate", "no sampled-accepted grid candidate found; this is not proof of continuous infeasibility",
+        NoCandidateFound,
+        "no sampled-accepted grid candidate found; this is not proof of continuous infeasibility",
       )
   }
 }
@@ -93,38 +100,50 @@ fn checked_search(
 ///|
 fn decode_program(value : Json) -> Program raise {
   guard value is Array(items) else {
-    raise InputError("segments must be an array")
+    raise FieldError("segments", "segments must be an array")
   }
-  if items.length() > 128 {
-    raise InputError("too many segments")
+  if items.length() > Segments_max {
+    raise FieldError("segments", "too many segments")
   }
   let segments : Array[Segment] = []
-  for item in items {
-    let f = obj(item, ["angle_deg", "lift_mm", "law"])
-    let law = match text(f, "law") {
-      "cycloidal" => Cycloidal
-      "345" => Polynomial345
-      "4567" => Polynomial4567
-      _ => raise InputError("law must be cycloidal, 345 or 4567")
-    }
-    let lift = num(f, "lift_mm")
-    if lift.abs() > 1.0e6 {
-      raise InputError("lift magnitude exceeds 1e6 mm")
-    }
-    segments.push({ angle: num(f, "angle_deg") * @math.PI / 180.0, lift, law, })
+  for i = 0; i < items.length(); i = i + 1 {
+    located("segments[\{i}]", fn() raise {
+      let f = obj(items[i], ["angle_deg", "lift_mm", "law"])
+      let law = match text(f, "law") {
+        "cycloidal" => Cycloidal
+        "345" => Polynomial345
+        "4567" => Polynomial4567
+        _ => raise FieldError("law", "law must be cycloidal, 345 or 4567")
+      }
+      let lift = num(f, "lift_mm")
+      if lift.abs() > Geometry_length_max {
+        raise FieldError(
+          "lift_mm",
+          "lift magnitude exceeds \{Geometry_length_max} mm",
+        )
+      }
+      let angle = num(f, "angle_deg") * @math.PI / 180.0
+      if !finite(angle) || angle < Segment_angle_min {
+        raise FieldError(
+          "angle_deg",
+          "segment angle must be finite and >= \{Segment_angle_min} rad",
+        )
+      }
+      segments.push({ angle, lift, law, })
+    })
   }
-  checked(program(segments))
+  located("segments", fn() raise { checked(program(segments)) })
 }
 
 ///|
 /// Shared wire limit in UTF-8 bytes, exported to CLI hosts.
 pub fn input_limit_bytes() -> Int32 {
-  200000
+  Input_bytes_max
 }
 
 ///|
 priv suberror RequestError {
-  RequestError(String, String)
+  RequestError(ErrorCode, String)
 }
 
 ///|
@@ -147,16 +166,16 @@ fn selected_outputs(f : Map[String, Json]) -> Array[String] raise {
 }
 
 ///|
-fn error_json(code : String, message : String) -> String {
+fn error_json(code : ErrorCode, message : String) -> String {
   field_error_json(code, message, Json(null))
 }
 
 ///|
-fn field_error_json(code : String, message : String, field : Json) -> String {
+fn field_error_json(code : ErrorCode, message : String, field : Json) -> String {
   let err : Json = {
     "ok": false,
     "schema_version": Json(Schema_version),
-    "error_code": code,
+    "error_code": Json(code.code()),
     "field": field,
     "error": message,
   }
@@ -168,15 +187,15 @@ fn crossing_json(check : CrossingCheck) -> Json {
   match check {
     Indeterminate(n, pairs) =>
       {
-        "status": "indeterminate",
+        "status": Json(check.status()),
         "count": Json(null),
         "confirmed_crossings": Json(n),
         "uncertain_pairs": Json(pairs),
       }
-    Checked(n) => { "status": "complete", "count": Json(n) }
-    NotChecked => { "status": "not_checked", "count": Json(null) }
+    Checked(n) => { "status": Json(check.status()), "count": Json(n) }
+    NotChecked => { "status": Json(check.status()), "count": Json(null) }
     Failed(message) =>
-      { "status": "failed", "count": Json(null), "error": message }
+      { "status": Json(check.status()), "count": Json(null), "error": message }
   }
 }
 
@@ -188,15 +207,7 @@ fn report(
   omega : Double,
   outputs : Array[String],
 ) -> Json {
-  let state = match a.crossings {
-    Checked(_) =>
-      if a.sampled_feasible {
-        "accepted_sampled"
-      } else {
-        "rejected"
-      }
-    _ => "incomplete"
-  }
+  let state = a.state()
   let fields : Map[String, Json] = {
     "schema_version": Json(Schema_version),
     "units": Json("mm"),
@@ -269,10 +280,13 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
   try {
     if input.length() > input_limit_bytes() ||
       @utf8.encode(input).length() > input_limit_bytes() {
-      raise RequestError("input_too_large", "input exceeds 200000 UTF-8 bytes")
+      raise RequestError(
+        InputTooLarge,
+        "input exceeds \{Input_bytes_max} UTF-8 bytes",
+      )
     }
     let value = @json.parse(input) catch {
-      _ => raise RequestError("invalid_json", "invalid JSON")
+      _ => raise RequestError(InvalidJson, "invalid JSON")
     }
     let f = obj(value, [
       "action", "units", "segments", "base_radius_mm", "roller_radius_mm", "offset_mm",
@@ -289,19 +303,60 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
       raise FieldError("units", "JSON interface requires mm units")
     }
     let p = decode_program(required(f, "segments"))
+    let action = text(f, "action")
+    if action != "analyze" && action != "search" {
+      raise FieldError("action", "action must be analyze or search")
+    }
     let roller = num(f, "roller_radius_mm")
+    if roller <= 0.0 || roller > Geometry_length_max {
+      raise FieldError(
+        "roller_radius_mm",
+        "roller radius must be in (0, \{Geometry_length_max}]",
+      )
+    }
     let offset = num(f, "offset_mm")
-    let omega = num(f, "rpm") * 2.0 * @math.PI / 60.0
-    let resolution = integer(f, "resolution", 36, 4000)
-    let pressure = num(f, "pressure_limit_deg") * @math.PI / 180.0
-    let result : Json = match text(f, "action") {
+    let omega = num(f, "rpm") * (2.0 * @math.PI / 60.0)
+    if !finite(omega) || omega <= 0.0 {
+      raise FieldError("rpm", "speed must be finite and positive")
+    }
+    let resolution = integer(
+      f,
+      "resolution",
+      Resolution_min,
+      Json_resolution_max,
+    )
+    if action == "search" && resolution > Search_resolution_max {
+      raise FieldError(
+        "resolution",
+        "search resolution must be <= \{Search_resolution_max}",
+      )
+    }
+    let pressure = num(f, "pressure_limit_deg") * (@math.PI / 180.0)
+    if pressure <= 0.0 || pressure >= @math.PI / 2.0 {
+      raise FieldError(
+        "pressure_limit_deg", "pressure limit must be in (0, 90) degrees",
+      )
+    }
+    let result : Json = match action {
       "analyze" => {
+        let radius = num(f, "base_radius_mm")
+        if radius < Base_radius_min || radius > Geometry_length_max {
+          raise FieldError("base_radius_mm", "base radius out of range")
+        }
+        if offset.abs() >= radius + roller {
+          raise FieldError(
+            "offset_mm", "offset magnitude must be smaller than prime-circle radius",
+          )
+        }
         let g : Geometry = {
-          base_radius: num(f, "base_radius_mm"),
+          base_radius: radius,
           roller_radius: roller,
           offset,
         }
-        let a = checked(analyze(p, g, resolution, pressure, omega))
+        let a = match analyze(p, g, resolution, pressure, omega) {
+          Ok(a) => a
+          Err(e) => raise RequestError(CalculationFailed, e)
+        }
         cache.push(a.points)
         {
           "ok": true,
@@ -310,18 +365,29 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
         }
       }
       "search" => {
-        let s = obj(required(f, "search"), ["lower_mm", "upper_mm", "intervals"])
+        let search_value = required(f, "search")
+        let (lower, upper, intervals) = located("search", fn() raise {
+          let s = obj(search_value, ["lower_mm", "upper_mm", "intervals"])
+          let lower = num(s, "lower_mm")
+          let upper = num(s, "upper_mm")
+          if lower < Base_radius_min || lower > Geometry_length_max {
+            raise FieldError("lower_mm", "search lower radius out of range")
+          }
+          if upper < lower || upper > Geometry_length_max {
+            raise FieldError(
+              "upper_mm", "search upper radius out of range or below lower bound",
+            )
+          }
+          (lower, upper, integer(s, "intervals", 1, Search_intervals_max))
+        })
+        if offset.abs() >= upper + roller {
+          raise FieldError(
+            "offset_mm", "offset magnitude must be smaller than upper prime-circle radius",
+          )
+        }
         let found = checked_search(
           search_base(
-            p,
-            roller,
-            offset,
-            num(s, "lower_mm"),
-            num(s, "upper_mm"),
-            integer(s, "intervals", 1, 256),
-            resolution,
-            pressure,
-            omega,
+            p, roller, offset, lower, upper, intervals, resolution, pressure, omega,
           ),
         )
         cache.push(found.analysis.points)
@@ -346,11 +412,11 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
   } catch {
     FieldError(field, message) => {
       cache.clear()
-      field_error_json("invalid_input", message, Json(field))
+      field_error_json(InvalidRequest, message, Json(field))
     }
     InputError(message) => {
       cache.clear()
-      error_json("invalid_input", message)
+      error_json(InvalidRequest, message)
     }
     RequestError(code, message) => {
       cache.clear()
@@ -358,7 +424,7 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
     }
     _ => {
       cache.clear()
-      error_json("internal_error", "unexpected calculation failure")
+      error_json(InternalError, "unexpected calculation failure")
     }
   }
 }
@@ -388,12 +454,12 @@ pub fn Session::run(self : Session, input : String) -> String {
 ///|
 pub fn Session::export_profile(self : Session, format : String) -> String {
   if self.points.is_empty() {
-    return error_json("no_result", "calculate before exporting")
+    return error_json(NoResult, "calculate before exporting")
   }
   let points = self.points[0]
   let content = match checked_export(points, format) {
     Ok(value) => value
-    Err(message) => return error_json("invalid_input", message)
+    Err(message) => return error_json(InvalidRequest, message)
   }
   let result : Json = {
     "ok": true,

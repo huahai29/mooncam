@@ -59,8 +59,10 @@ priv struct MotionMesh {
 ///|
 /// O(N+S) evaluation: the sampling loop already knows its segment index.
 fn motion_mesh(p : Program, resolution : Int32) -> Result[MotionMesh, String] {
-  if resolution < 36 || resolution > 20000 {
-    return Err("resolution must be between 36 and 20000")
+  if resolution < Resolution_min || resolution > Library_resolution_max {
+    return Err(
+      "resolution must be between \{Resolution_min} and \{Library_resolution_max}",
+    )
   }
   let out : Array[MotionSample] = []
   let mut endpoint_jerk = 0.0

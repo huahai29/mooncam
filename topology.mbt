@@ -27,6 +27,10 @@ fn orientation(
   }
   let left = dx / scale * (ey / scale)
   let right = dy / scale * (ex / scale)
+  if (dx != 0.0 && ey != 0.0 && left.abs() < 2.2250738585072014e-308) ||
+    (dy != 0.0 && ex != 0.0 && right.abs() < 2.2250738585072014e-308) {
+    return 0
+  }
   let det = left - right
   let error = (left.abs() + right.abs()) * 2.0e-15
   if det > error {
@@ -56,8 +60,11 @@ priv struct EdgeBounds {
 pub fn crossing_report(
   points : Array[CamPoint],
 ) -> Result[CrossingReport, String] {
-  if points.length() < 4 || points.length() > 25000 {
-    return Err("crossing check requires 4..25000 closed profile points")
+  if points.length() < Profile_points_min ||
+    points.length() > Profile_points_max {
+    return Err(
+      "crossing check requires \{Profile_points_min}..\{Profile_points_max} closed profile points",
+    )
   }
   let mut extent = 1.0
   let mut min_y = points[0].y
@@ -74,13 +81,10 @@ pub fn crossing_report(
     min_x = min_x.min(p.x)
     max_x = max_x.max(p.x)
   }
-  if extent > 1.0e150 {
+  if extent > Coordinate_max {
     return Err("profile coordinate scale exceeds safe crossing range")
   }
-  let first = points[0]
-  let last = points[points.length() - 1]
-  if @math.hypot(first.x - last.x, first.y - last.y) >
-    (max_x - min_x).max(max_y - min_y) * 1.0e-10 + extent * 2.0e-15 {
+  if !profile_closed(points) {
     return Err("profile polyline must be closed")
   }
   let n = points.length() - 1
@@ -146,7 +150,7 @@ pub fn crossing_report(
       let ab = bounds[i]
       for v = u + 1; v < bucket.length(); v = v + 1 {
         pair_visits = pair_visits + 1
-        if pair_visits > 4000000 {
+        if pair_visits > Crossing_pair_budget {
           return Err(
             "crossing work budget exceeded; geometry remains unchecked",
           )

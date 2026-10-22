@@ -19,7 +19,7 @@ try{
   else inputs.push(arg);
  }
  if(!inputs.length||inputs.filter(x=>x==='-').length>1)throw new Error('Provide input files, with stdin at most once.');
- const {run,input_limit_bytes}=await import('../web/engine.js');
+ const {run,input_limit_bytes,error_exit_code,result_exit_code}=await import('../web/engine.js');
  const limit=input_limit_bytes();let exit=0;
  const rank={0:0,2:1,3:2,4:3,1:4};
  for(let index=0;index<inputs.length;index++){
@@ -35,7 +35,7 @@ try{
    const original=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
    const effective={...original,...overrides};
    const response=JSON.parse(run(JSON.stringify({...effective,outputs:output?['csv','svg','dxf']:[],include_input:false})));
-   if(!response.ok){console.error(JSON.stringify({input:file,error_code:response.error_code,field:response.field,error:response.error}));code=response.error_code==='no_candidate'?3:response.error_code==='check_indeterminate'?4:1;}
+   if(!response.ok){console.error(JSON.stringify({input:file,error_code:response.error_code,field:response.field,error:response.error}));code=error_exit_code(response.error_code);}
    else{
     const {csv,svg,dxf,points,...summary}=response.result;
     if(output){
@@ -48,7 +48,7 @@ try{
      console.error(`Saved report, effective input and profiles to ${out}`);
     }
     console.log(JSON.stringify({...summary,input:file,tested:response.tested,grid_step_mm:response.grid_step_mm},null,inputs.length>1?0:2));
-    code=summary.state==='incomplete'?4:summary.sampled_feasible?0:2;
+    code=result_exit_code(summary.state);
    }
   }catch(error){console.error(`MoonCam (${file}): ${error.message}`);}
   if(rank[code]>rank[exit])exit=code;

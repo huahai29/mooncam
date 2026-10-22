@@ -4,7 +4,7 @@ import{readFileSync,mkdtempSync,readdirSync,writeFileSync}from'node:fs';
 import{tmpdir}from'node:os';
 import{join,resolve}from'node:path';
 import{spawnSync}from'node:child_process';
-import{run,input_limit_bytes,export_profile}from'../web/engine.js';
+import{run,input_limit_bytes,export_profile,contract,error_exit_code}from'../web/engine.js';
 const base=JSON.parse(readFileSync(new URL('../examples/workshop.json',import.meta.url),'utf8'));
 const call=x=>JSON.parse(run(JSON.stringify(x)));
 const cli=(path,...args)=>spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),path,...args],{encoding:'utf8'});
@@ -69,4 +69,41 @@ test('CLI supports bounded stdin, version, overrides and independent batch repor
  assert.equal(batch.status,2,batch.stderr);const rows=batch.stdout.trim().split('\n').map(JSON.parse);assert.equal(rows.length,2);
  assert.equal(rows[0].sampled_feasible,true);assert.equal(rows[1].sampled_feasible,false);
  assert.equal(readdirSync(dir).length,2);
+});
+
+test('published contract and actual JSON limits agree at both boundaries',()=>{
+ const spec=JSON.parse(contract()),l=spec.limits;assert.equal(spec.schema_version,2);
+ for(const resolution of [l.resolution_min,l.json_resolution_max])assert.equal(call({...base,resolution,outputs:[]}).ok,true);
+ for(const resolution of [l.resolution_min-1,l.json_resolution_max+1]){
+  const r=call({...base,resolution});assert.equal(r.error_code,'invalid_input');assert.equal(r.field,'resolution');
+ }
+ const search={...base,action:'search',search:{lower_mm:40,upper_mm:40,intervals:1},outputs:[]};
+ assert.equal(call({...search,resolution:l.search_resolution_max}).ok,true);
+ assert.equal(call({...search,resolution:l.search_resolution_max+1}).field,'resolution');
+ assert.equal(l.search_resolution_max*l.search_refinement,l.json_resolution_max);
+ assert.equal(l.input_bytes_max,input_limit_bytes());
+ for(const error of spec.errors)assert.equal(error_exit_code(error.code),error.exit_code);
+ assert.equal(error_exit_code('unknown_future_error'),1);
+});
+
+test('nested error paths locate segments and search fields',()=>{
+ for(const [patch,field] of [
+  [{segments:[{angle_deg:360,lift_mm:0,law:'unknown'}]},'segments[0].law'],
+  [{segments:[{angle_deg:360,lift_mm:'oops',law:'4567'}]},'segments[0].lift_mm'],
+  [{segments:[{angle_deg:360,lift_mm:0,law:'4567',extra:1}]},'segments[0].extra'],
+  [{action:'search',search:{lower_mm:40,upper_mm:40,intervals:0}},'search.intervals'],
+  [{action:'search',search:{lower_mm:40,upper_mm:30,intervals:1}},'search.upper_mm'],
+  [{action:'search',search:{lower_mm:40,upper_mm:40,intervals:1},offset_mm:100},'offset_mm'],
+  [{rpm:0},'rpm'],[{pressure_limit_deg:90},'pressure_limit_deg'],[{roller_radius_mm:0},'roller_radius_mm'],
+ ]){
+  const r=call({...base,...patch});assert.equal(r.error_code,'invalid_input');assert.equal(r.field,field);
+ }
+ const missing={...base};delete missing.segments;assert.equal(call(missing).field,'segments');
+ assert.equal(call({...base,action:'search',search:undefined}).field,'search');
+});
+
+test('finite valid input with derivative overflow is a calculation failure',()=>{
+ const r=call({...base,rpm:1e120,outputs:[]});assert.equal(r.ok,false);
+ assert.equal(r.error_code,'calculation_failed');assert.equal(r.field,null);
+ assert.equal(error_exit_code(r.error_code),1);
 });

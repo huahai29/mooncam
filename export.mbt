@@ -89,10 +89,12 @@ pub fn checked_export(
   points : Array[CamPoint],
   format : String,
 ) -> Result[String, String] {
-  if points.length() < 4 || points.length() > 25000 {
-    return Err("export requires 4..25000 closed profile points")
+  if points.length() < Profile_points_min ||
+    points.length() > Profile_points_max {
+    return Err(
+      "export requires \{Profile_points_min}..\{Profile_points_max} closed profile points",
+    )
   }
-  let mut extent = 1.0
   for p in points {
     for
       x in [
@@ -109,15 +111,12 @@ pub fn checked_export(
         p.curvature,
         p.offset_factor,
       ] {
-      if !finite(x) || x.abs() > 1.0e150 {
+      if !finite(x) || x.abs() > Coordinate_max {
         return Err("invalid export coordinate or metric")
       }
     }
-    extent = extent.max(p.x.abs()).max(p.y.abs())
   }
-  let first = points[0]
-  let last = points[points.length() - 1]
-  if @math.hypot(first.x - last.x, first.y - last.y) > extent * 1.0e-10 {
+  if !profile_closed(points) {
     return Err("export polyline must be closed")
   }
   match format {

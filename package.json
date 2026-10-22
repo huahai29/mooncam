@@ -12,7 +12,9 @@
     "test:oracle": "python tests/oracle.py",
     "test:browser": "playwright test",
     "test:dxf": "python tests/dxf_interop.py",
-    "benchmark": "node tests/benchmark.mjs"
+    "benchmark": "node tests/benchmark.mjs",
+    "docs:contract": "node scripts/contract-docs.mjs",
+    "docs:check": "node scripts/contract-docs.mjs --check"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"

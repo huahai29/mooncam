@@ -35,16 +35,16 @@ pub fn search_base(
 ) -> Result[SearchResult, SearchError] {
   if !finite(lower) ||
     !finite(upper) ||
-    lower < 1.0e-6 ||
-    upper > 1.0e6 ||
+    lower < Base_radius_min ||
+    upper > Geometry_length_max ||
     upper < lower ||
     intervals < 1 ||
-    intervals > 256 ||
-    resolution < 36 ||
-    resolution > 2000 {
+    intervals > Search_intervals_max ||
+    resolution < Resolution_min ||
+    resolution > Search_resolution_max {
     return Err(
       InvalidInput(
-        "search needs ordered radius bounds in [1e-6, 1e6], 1..256 intervals and 36..2000 resolution",
+        "search needs ordered radius bounds in [\{Base_radius_min}, \{Geometry_length_max}], 1..\{Search_intervals_max} intervals and \{Resolution_min}..\{Search_resolution_max} resolution",
       ),
     )
   }
@@ -60,7 +60,7 @@ pub fn search_base(
     Ok(m) => m
     Err(e) => return Err(NumericalFailure(e))
   }
-  let fine = match motion_mesh(p, resolution * 2) {
+  let fine = match motion_mesh(p, resolution * Search_refinement) {
     Ok(m) => m
     Err(e) => return Err(NumericalFailure(e))
   }
@@ -104,7 +104,7 @@ pub fn search_base(
         analysis: complete,
         tested: i + 1,
         grid_step: step,
-        verification_resolution: resolution * 2,
+        verification_resolution: resolution * Search_refinement,
       })
     }
   }

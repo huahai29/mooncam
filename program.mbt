@@ -17,8 +17,8 @@ pub struct Program {
 ///|
 /// Build a closed one-revolution program starting at zero lift.
 pub fn program(segments : Array[Segment]) -> Result[Program, String] {
-  if segments.length() == 0 || segments.length() > 128 {
-    return Err("program requires 1 to 128 segments")
+  if segments.length() == 0 || segments.length() > Segments_max {
+    return Err("program requires 1 to \{Segments_max} segments")
   }
   let mut angle = 0.0
   let mut lift = 0.0
@@ -28,9 +28,11 @@ pub fn program(segments : Array[Segment]) -> Result[Program, String] {
   for segment in segments {
     starts.push(angle)
     heights.push(lift)
-    if !finite(segment.angle) || segment.angle < 1.0e-6 || !finite(segment.lift) {
+    if !finite(segment.angle) ||
+      segment.angle < Segment_angle_min ||
+      !finite(segment.lift) {
       return Err(
-        "segment angle must be finite and >= 1e-6 rad; lift must be finite",
+        "segment angle must be finite and >= \{Segment_angle_min} rad; lift must be finite",
       )
     }
     angle = angle + segment.angle
