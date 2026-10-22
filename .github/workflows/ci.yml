@@ -17,16 +17,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 安装 MoonBit stable
+      - name: 安装固定 MoonBit 工具链
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o /tmp/install-moonbit.sh
-          bash /tmp/install-moonbit.sh
+          bash /tmp/install-moonbit.sh "0.10.15+943464bfa"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: 格式与严格检查
         run: |
           moon version --all
           moon fmt --check
           moon check --deny-warn --target all
+          moon info
+          git diff --exit-code -- '*.mbti'
       - name: 多后端测试与纯 MoonBit 示例
         run: |
           moon test --target wasm
@@ -42,6 +44,7 @@ jobs:
           python -m pip install -r requirements-test.txt
           python tests/dxf_interop.py
           npm run demo
+          npm run benchmark
       - name: 浏览器测试
         run: |
           npm ci

@@ -3,6 +3,7 @@
 pub(all) enum SearchError {
   InvalidInput(String)
   NumericalFailure(String)
+  IndeterminateGeometry(String)
   NoCandidate(Int32)
 }
 
@@ -93,6 +94,8 @@ pub fn search_base(
     let complete = finish_scan(b)
     match complete.crossings {
       Failed(e) => return Err(NumericalFailure(e))
+      Indeterminate(_, _) =>
+        return Err(IndeterminateGeometry("profile topology is indeterminate"))
       _ => ()
     }
     if complete.sampled_feasible {

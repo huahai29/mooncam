@@ -3,6 +3,7 @@
 pub(all) enum CrossingCheck {
   NotChecked
   Checked(Int32)
+  Indeterminate(Int32, Int32)
   Failed(String)
 }
 
@@ -143,7 +144,8 @@ fn scan_mesh(
   let points : Array[CamPoint] = []
   let mut pressure = 0.0
   let mut pa = 0.0
-  let mut factor = 1.0 / 0.0
+  let mut factor = 0.0
+  let mut first_factor = true
   let mut fa = 0.0
   let mut velocity = 0.0
   let mut acceleration = 0.0
@@ -160,7 +162,8 @@ fn scan_mesh(
       pressure = geom.pressure.abs()
       pa = item.theta
     }
-    if geom.factor < factor {
+    if first_factor || geom.factor < factor {
+      first_factor = false
       factor = geom.factor
       fa = item.theta
     }
@@ -208,8 +211,13 @@ pub fn sampled_acceptance(local_ok : Bool, crossings : CrossingCheck) -> Bool {
 ///|
 fn finish_scan(scan : Scan) -> Analysis {
   let m = scan.metrics
-  let crossings = match profile_crossings(scan.points) {
-    Ok(n) => Checked(n)
+  let crossings = match crossing_report(scan.points) {
+    Ok(r) =>
+      if r.uncertain_pairs > 0 {
+        Indeterminate(r.crossings, r.uncertain_pairs)
+      } else {
+        Checked(r.crossings)
+      }
     Err(e) => Failed(e)
   }
   {

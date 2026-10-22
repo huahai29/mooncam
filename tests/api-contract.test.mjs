@@ -4,7 +4,7 @@ import{readFileSync,mkdtempSync,readdirSync,writeFileSync}from'node:fs';
 import{tmpdir}from'node:os';
 import{join,resolve}from'node:path';
 import{spawnSync}from'node:child_process';
-import{run,input_limit_bytes}from'../web/engine.js';
+import{run,input_limit_bytes,export_profile}from'../web/engine.js';
 const base=JSON.parse(readFileSync(new URL('../examples/workshop.json',import.meta.url),'utf8'));
 const call=x=>JSON.parse(run(JSON.stringify(x)));
 const cli=(path,...args)=>spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),path,...args],{encoding:'utf8'});
@@ -41,4 +41,32 @@ test('CLI distinguishes no candidate and stores compact nonduplicated reports',(
  const r=cli(input);assert.equal(r.status,3);assert.match(r.stderr,/no_candidate/);
  writeFileSync(input,JSON.stringify({...base,rpm:0}));assert.equal(cli(input).status,1);
  writeFileSync(input,JSON.stringify({...base,base_radius_mm:5}));assert.equal(cli(input).status,2);
+});
+
+test('field errors and invalid include_input are structured',()=>{
+ for(const [patch,field] of [[{include_input:1},'include_input'],[{resolution:35},'resolution'],[{rpm:'fast'},'rpm'],[{outputs:['csv','csv']},'outputs']]){
+  const r=call({...base,...patch});assert.equal(r.ok,false);assert.equal(r.error_code,'invalid_input');assert.equal(r.field,field);
+ }
+});
+
+test('MoonBit session exports the previous result without replay and clears on failure',()=>{
+ const first=call({...base,outputs:['csv','svg','dxf']});
+ for(const ext of ['csv','svg','dxf'])assert.equal(JSON.parse(export_profile(ext)).content,first.result[ext]);
+ assert.equal(JSON.parse(export_profile('unknown')).error_code,'invalid_input');
+ assert.equal(call({...base,rpm:0}).ok,false);
+ assert.equal(JSON.parse(export_profile('csv')).error_code,'no_result');
+});
+
+test('CLI supports bounded stdin, version, overrides and independent batch reports',()=>{
+ const command=(args,input)=>spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),...args],{encoding:'utf8',input});
+ assert.match(command(['--version']).stdout,/^0\.2\.0/);
+ assert.equal(command(['-'],JSON.stringify(base)).status,0);
+ const changed=command(['-','--base-radius','5'],JSON.stringify(base));assert.equal(changed.status,2);
+ assert.equal(command(['-','--rpm','oops'],JSON.stringify(base)).status,1);
+ assert.equal(command(['-'],' '.repeat(input_limit_bytes()+1)).status,1);
+ const dir=mkdtempSync(join(tmpdir(),'mooncam-batch-'));
+ const batch=command(['examples/workshop.json','examples/pressure-limit.json','--out',dir]);
+ assert.equal(batch.status,2,batch.stderr);const rows=batch.stdout.trim().split('\n').map(JSON.parse);assert.equal(rows.length,2);
+ assert.equal(rows[0].sampled_feasible,true);assert.equal(rows[1].sampled_feasible,false);
+ assert.equal(readdirSync(dir).length,2);
 });

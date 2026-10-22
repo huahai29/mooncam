@@ -1,40 +1,45 @@
 ///|
+const Schema_version : Int32 = 2
+
+///|
 priv suberror InputError {
   InputError(String)
 }
 
 ///|
-fn obj(
-  value : Json,
-  allowed : Array[String],
-) -> Map[String, Json] raise InputError {
+priv suberror FieldError {
+  FieldError(String, String)
+}
+
+///|
+fn obj(value : Json, allowed : Array[String]) -> Map[String, Json] raise {
   guard value is Object(fields) else { raise InputError("expected object") }
   for key, _ in fields {
     if !allowed.contains(key) {
-      raise InputError("unknown field: " + key)
+      raise FieldError(key, "unknown field: " + key)
     }
   }
   fields
 }
 
 ///|
-fn required(fields : Map[String, Json], key : String) -> Json raise InputError {
+fn required(fields : Map[String, Json], key : String) -> Json raise {
   match fields.get(key) {
     Some(v) => v
-    None => raise InputError("missing field: " + key)
+    None => raise FieldError(key, "missing field: " + key)
   }
 }
 
 ///|
-fn num(fields : Map[String, Json], key : String) -> Double raise InputError {
+fn num(fields : Map[String, Json], key : String) -> Double raise {
   match required(fields, key) {
     Number(n, ..) =>
       if finite(n) {
         n
       } else {
-        raise InputError("non-finite field: " + key)
+        raise FieldError(key, "non-finite field: " + key)
       }
-    _ => raise InputError("expected number: " + key)
+    _ => raise FieldError(key, "expected number: " + key)
   }
 }
 
@@ -44,24 +49,24 @@ fn integer(
   key : String,
   low : Int32,
   high : Int32,
-) -> Int32 raise InputError {
+) -> Int32 raise {
   let n = num(fields, key)
   if n < low.to_double() || n > high.to_double() || @math.floor(n) != n {
-    raise InputError("integer out of range: " + key)
+    raise FieldError(key, "integer out of range: " + key)
   }
   n.to_int()
 }
 
 ///|
-fn text(fields : Map[String, Json], key : String) -> String raise InputError {
+fn text(fields : Map[String, Json], key : String) -> String raise {
   match required(fields, key) {
     String(s) => s
-    _ => raise InputError("expected string: " + key)
+    _ => raise FieldError(key, "expected string: " + key)
   }
 }
 
 ///|
-fn[T] checked(value : Result[T, String]) -> T raise InputError {
+fn[T] checked(value : Result[T, String]) -> T raise {
   match value {
     Ok(v) => v
     Err(e) => raise InputError(e)
@@ -75,6 +80,8 @@ fn checked_search(
   match value {
     Ok(v) => v
     Err(InvalidInput(e)) => raise InputError(e)
+    Err(IndeterminateGeometry(e)) =>
+      raise RequestError("check_indeterminate", e)
     Err(NumericalFailure(e)) => raise RequestError("calculation_failed", e)
     Err(NoCandidate(_)) =>
       raise RequestError(
@@ -84,7 +91,7 @@ fn checked_search(
 }
 
 ///|
-fn decode_program(value : Json) -> Program raise InputError {
+fn decode_program(value : Json) -> Program raise {
   guard value is Array(items) else {
     raise InputError("segments must be an array")
   }
@@ -121,18 +128,18 @@ priv suberror RequestError {
 }
 
 ///|
-fn selected_outputs(f : Map[String, Json]) -> Array[String] raise InputError {
+fn selected_outputs(f : Map[String, Json]) -> Array[String] raise {
   let choices : Array[String] = []
   let value = f.get("outputs").unwrap_or(Json(["points"]))
   guard value is Array(items) else {
-    raise InputError("outputs must be an array")
+    raise FieldError("outputs", "outputs must be an array")
   }
   for item in items {
     guard item is String(name) else {
-      raise InputError("output names must be strings")
+      raise FieldError("outputs", "output names must be strings")
     }
     if !["points", "csv", "svg", "dxf"].contains(name) || choices.contains(name) {
-      raise InputError("unknown or duplicate output: " + name)
+      raise FieldError("outputs", "unknown or duplicate output: " + name)
     }
     choices.push(name)
   }
@@ -141,10 +148,16 @@ fn selected_outputs(f : Map[String, Json]) -> Array[String] raise InputError {
 
 ///|
 fn error_json(code : String, message : String) -> String {
+  field_error_json(code, message, Json(null))
+}
+
+///|
+fn field_error_json(code : String, message : String, field : Json) -> String {
   let err : Json = {
     "ok": false,
-    "schema_version": 2,
+    "schema_version": Json(Schema_version),
     "error_code": code,
+    "field": field,
     "error": message,
   }
   err.stringify()
@@ -153,6 +166,13 @@ fn error_json(code : String, message : String) -> String {
 ///|
 fn crossing_json(check : CrossingCheck) -> Json {
   match check {
+    Indeterminate(n, pairs) =>
+      {
+        "status": "indeterminate",
+        "count": Json(null),
+        "confirmed_crossings": Json(n),
+        "uncertain_pairs": Json(pairs),
+      }
     Checked(n) => { "status": "complete", "count": Json(n) }
     NotChecked => { "status": "not_checked", "count": Json(null) }
     Failed(message) =>
@@ -178,7 +198,7 @@ fn report(
     _ => "incomplete"
   }
   let fields : Map[String, Json] = {
-    "schema_version": Json(2),
+    "schema_version": Json(Schema_version),
     "units": Json("mm"),
     "state": Json(state),
     "sampled_local_feasible": Json(a.sampled_local_feasible),
@@ -204,7 +224,7 @@ fn report(
     "max_jerk_mm_s3": Json(a.max_jerk),
     "jerk_jumps": Json(a.jerk_jumps),
     "scope": Json(
-      "Sampled local constraints plus strict polyline crossing check; no continuous or global collision certification.",
+      "Sampled local constraints plus filtered polyline crossing check; uncertain contacts never accepted; no continuous or global collision certification.",
     ),
   }
   if outputs.contains("points") {
@@ -244,7 +264,8 @@ fn report(
 
 ///|
 /// Schema v2: byte-bounded input, selected outputs, typed errors and check states.
-pub fn run_json(input : String) -> String {
+fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
+  cache.clear()
   try {
     if input.length() > input_limit_bytes() ||
       @utf8.encode(input).length() > input_limit_bytes() {
@@ -262,10 +283,10 @@ pub fn run_json(input : String) -> String {
       None => false
       Some(True) => true
       Some(False) => false
-      _ => raise InputError("include_input must be boolean")
+      _ => raise FieldError("include_input", "include_input must be boolean")
     }
     if text(f, "units") != "mm" {
-      raise InputError("JSON interface requires mm units")
+      raise FieldError("units", "JSON interface requires mm units")
     }
     let p = decode_program(required(f, "segments"))
     let roller = num(f, "roller_radius_mm")
@@ -281,9 +302,10 @@ pub fn run_json(input : String) -> String {
           offset,
         }
         let a = checked(analyze(p, g, resolution, pressure, omega))
+        cache.push(a.points)
         {
           "ok": true,
-          "schema_version": 2,
+          "schema_version": Json(Schema_version),
           "result": report(a, g, omega, outputs),
         }
       }
@@ -302,16 +324,17 @@ pub fn run_json(input : String) -> String {
             omega,
           ),
         )
+        cache.push(found.analysis.points)
         {
           "ok": true,
-          "schema_version": 2,
+          "schema_version": Json(Schema_version),
           "tested": Json(found.tested),
           "grid_step_mm": Json(found.grid_step),
           "search_scope": "First sampled-accepted grid candidate; topology completed on the fine mesh; not a continuous optimum.",
           "result": report(found.analysis, found.geometry, omega, outputs),
         }
       }
-      _ => raise InputError("action must be analyze or search")
+      _ => raise FieldError("action", "action must be analyze or search")
     }
     if include_input {
       match result {
@@ -321,8 +344,62 @@ pub fn run_json(input : String) -> String {
     }
     result.stringify()
   } catch {
-    InputError(message) => error_json("invalid_input", message)
-    RequestError(code, message) => error_json(code, message)
-    _ => error_json("internal_error", "unexpected calculation failure")
+    FieldError(field, message) => {
+      cache.clear()
+      field_error_json("invalid_input", message, Json(field))
+    }
+    InputError(message) => {
+      cache.clear()
+      error_json("invalid_input", message)
+    }
+    RequestError(code, message) => {
+      cache.clear()
+      error_json(code, message)
+    }
+    _ => {
+      cache.clear()
+      error_json("internal_error", "unexpected calculation failure")
+    }
   }
+}
+
+///|
+/// Stateless request API. Use a Session to export a previous result without recomputation.
+pub fn run_json(input : String) -> String {
+  run_json_cached(input, [])
+}
+
+///|
+/// One host-owned calculation result; cache lifetime is explicit, not process-global.
+pub struct Session {
+  points : Array[Array[CamPoint]]
+}
+
+///|
+pub fn session() -> Session {
+  { points: [], }
+}
+
+///|
+pub fn Session::run(self : Session, input : String) -> String {
+  run_json_cached(input, self.points)
+}
+
+///|
+pub fn Session::export_profile(self : Session, format : String) -> String {
+  if self.points.is_empty() {
+    return error_json("no_result", "calculate before exporting")
+  }
+  let points = self.points[0]
+  let content = match checked_export(points, format) {
+    Ok(value) => value
+    Err(message) => return error_json("invalid_input", message)
+  }
+  let result : Json = {
+    "ok": true,
+    "schema_version": Json(Schema_version),
+    "format": Json(format),
+    "content": Json(content),
+  }
+  result.stringify()
 }

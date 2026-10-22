@@ -1,4 +1,17 @@
 ///|
+/// Orientation with a scale-relative tolerance for sampled line segments.
+fn turn(
+  ax : Double,
+  ay : Double,
+  bx : Double,
+  by : Double,
+  cx : Double,
+  cy : Double,
+) -> Double {
+  (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+}
+
+///|
 /// Quadratic oracle retained only in tests.
 fn brute_crossings(points : Array[CamPoint]) -> Result[Int32, String] {
   if points.length() < 4 || points.length() > 25000 {
@@ -16,7 +29,7 @@ fn brute_crossings(points : Array[CamPoint]) -> Result[Int32, String] {
   if @math.hypot(first.x - last.x, first.y - last.y) > extent * 1.0e-8 {
     return Err("profile polyline must be closed")
   }
-  let eps = extent * extent * 1.0e-12
+  let eps = 0.0
   let mut count = 0
   let n = points.length() - 1
   for i = 0; i < n; i = i + 1 {
@@ -64,7 +77,7 @@ test "bucketed crossings match quadratic oracle on deterministic irregular polyg
       }
       points.push(points[0])
       assert_eq(
-        profile_crossings(points).unwrap(),
+        crossing_report(points).unwrap().crossings,
         brute_crossings(points).unwrap(),
       )
     }
@@ -92,7 +105,7 @@ test "buckets preserve degeneracies boundary spans and translated coordinates" {
       points.push({ ..seed, x: xy.0 * scale + 3.0, y: xy.1 * scale - 3.0, })
     }
     assert_eq(
-      profile_crossings(points).unwrap(),
+      crossing_report(points).unwrap().crossings,
       brute_crossings(points).unwrap(),
     )
   }

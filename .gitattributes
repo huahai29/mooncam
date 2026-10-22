@@ -5,3 +5,6 @@
 *.json text eol=lf
 *.yml text eol=lf
 *.png binary
+*.mbti text eol=lf
+moon.pkg text eol=lf
+moon.mod text eol=lf

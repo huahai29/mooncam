@@ -4,6 +4,8 @@ package "huahai29/mooncam"
 // Values
 pub fn analyze(Program, Geometry, Int, Double, Double) -> Result[Analysis, String]
 
+pub fn checked_export(Array[CamPoint], String) -> Result[String, String]
+
 pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
 
 pub fn crossing_report(Array[CamPoint]) -> Result[CrossingReport, String]
@@ -35,6 +37,8 @@ pub fn sample(Program, Geometry, Int) -> Result[Array[CamPoint], String]
 pub fn sampled_acceptance(Bool, CrossingCheck) -> Bool
 
 pub fn search_base(Program, Double, Double, Double, Double, Int, Int, Double, Double) -> Result[SearchResult, SearchError]
+
+pub fn session() -> Session
 
 pub fn svg(Array[CamPoint]) -> String
 
@@ -78,12 +82,14 @@ pub(all) struct CamPoint {
 pub(all) enum CrossingCheck {
   NotChecked
   Checked(Int)
+  Indeterminate(Int, Int)
   Failed(String)
 }
 
 pub(all) struct CrossingReport {
   crossings : Int
   pair_visits : Int
+  uncertain_pairs : Int
 }
 
 pub(all) struct Geometry {
@@ -128,6 +134,7 @@ pub struct Program {
 pub(all) enum SearchError {
   InvalidInput(String)
   NumericalFailure(String)
+  IndeterminateGeometry(String)
   NoCandidate(Int)
 }
 
@@ -144,6 +151,12 @@ pub(all) struct Segment {
   lift : Double
   law : Law
 }
+
+pub struct Session {
+  points : Array[Array[CamPoint]]
+}
+pub fn Session::export_profile(Self, String) -> String
+pub fn Session::run(Self, String) -> String
 
 // Type aliases
 

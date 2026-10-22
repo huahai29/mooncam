@@ -82,3 +82,48 @@ pub fn dxf_mm(points : Array[CamPoint]) -> String {
   lines.push("EOF")
   lines.join("\n") + "\n"
 }
+
+///|
+/// Checked boundary for external point arrays. Raw formatters assume valid samples.
+pub fn checked_export(
+  points : Array[CamPoint],
+  format : String,
+) -> Result[String, String] {
+  if points.length() < 4 || points.length() > 25000 {
+    return Err("export requires 4..25000 closed profile points")
+  }
+  let mut extent = 1.0
+  for p in points {
+    for
+      x in [
+        p.theta,
+        p.motion.s,
+        p.motion.v,
+        p.motion.a,
+        p.motion.j,
+        p.x,
+        p.y,
+        p.pitch_x,
+        p.pitch_y,
+        p.pressure,
+        p.curvature,
+        p.offset_factor,
+      ] {
+      if !finite(x) || x.abs() > 1.0e150 {
+        return Err("invalid export coordinate or metric")
+      }
+    }
+    extent = extent.max(p.x.abs()).max(p.y.abs())
+  }
+  let first = points[0]
+  let last = points[points.length() - 1]
+  if @math.hypot(first.x - last.x, first.y - last.y) > extent * 1.0e-10 {
+    return Err("export polyline must be closed")
+  }
+  match format {
+    "csv" => Ok(csv(points))
+    "svg" => Ok(svg(points))
+    "dxf" => Ok(dxf_mm(points))
+    _ => Err("unknown export format")
+  }
+}

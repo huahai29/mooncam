@@ -1,6 +1,8 @@
-import { run } from './engine.js';
+import { run, export_profile } from './engine.js';
 self.postMessage({ready: true});
-self.onmessage = event => {
-  try { self.postMessage({response: JSON.parse(run(event.data))}); }
-  catch (error) { self.postMessage({error: error.message}); }
+self.onmessage = ({data}) => {
+  try {
+    const response = JSON.parse(data.kind === 'export' ? export_profile(data.format) : run(data.input));
+    self.postMessage({id: data.id, response});
+  } catch (error) { self.postMessage({id: data.id, error: error.message}); }
 };

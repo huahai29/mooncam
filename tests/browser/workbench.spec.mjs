@@ -31,3 +31,48 @@ test('mobile layout remains usable and inputs with unknown fields fail',async({p
  await page.locator('#segments').fill('[{"angle_deg":360,"lift_mm":0,"extra":1}]');
  await page.locator('#analyze').click();await expect(page.locator('#status')).toContainText('unknown field');
 });
+
+test('worker responses are tied to a request and changed inputs stay visibly stale',async({page})=>{
+ await page.addInitScript(()=>{
+  const Original=window.Worker;
+  window.Worker=class extends Original {
+   constructor(...args){super(...args);super.addEventListener('message',event=>{
+    event.stopImmediatePropagation();const data=event.data;
+    setTimeout(()=>this.deliver?.({data}),data.ready?0:250);
+   });}
+   set onmessage(fn){this.deliver=fn;}
+  };
+ });
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#analyze').click();await page.locator('#base').fill('5');
+ await expect(page.locator('#status')).toContainText('参数在计算期间发生变化');
+ await expect(page.locator('#metrics')).toContainText('40.00 mm');
+});
+
+test('missing Worker has a functional MoonBit compatibility mode',async({page})=>{
+ await page.addInitScript(()=>{window.Worker=undefined;});
+ await page.goto('/');await expect(page.locator('#status')).toContainText('兼容模式');
+ await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('满足约束');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="csv"]').click()]);
+ expect(download.suggestedFilename()).toBe('mooncam.csv');
+});
+
+test('late duplicate response cannot overwrite a later calculation',async({page})=>{
+ await page.addInitScript(()=>{
+  const Original=window.Worker;
+  window.Worker=class extends Original {
+   constructor(...args){super(...args);super.addEventListener('message',event=>{
+    event.stopImmediatePropagation();const data=event.data;this.deliver?.({data});
+    if(data.id===1)setTimeout(()=>this.deliver?.({data}),800);
+   });}
+   set onmessage(fn){this.deliver=fn;}
+  };
+ });
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('40.00 mm');
+ await page.locator('#base').fill('5');await page.locator('#analyze').click();
+ await expect(page.locator('#metrics')).toContainText('5.00 mm');
+ await page.waitForTimeout(1000);
+ await expect(page.locator('#metrics')).toContainText('5.00 mm');
+ await expect(page.locator('#metrics')).toContainText('需调整');
+});
