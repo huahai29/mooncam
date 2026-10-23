@@ -1,5 +1,7 @@
 # MoonCam
 
+[![MoonCam 检查](https://github.com/huahai29/mooncam/actions/workflows/ci.yml/badge.svg)](https://github.com/huahai29/mooncam/actions/workflows/ci.yml)
+
 **用 MoonBit 将运动要求转换为凸轮轮廓，并计算运动学与几何约束。**
 
 面向机械课程设计、低速教学模型和凸轮方案初选。输入分段升程、机构尺寸和转速，由 MoonBit 输出真实滚轮接触轮廓与采样约束分析。
@@ -8,6 +10,7 @@
 | --- | --- |
 | 模型 | 平面盘形凸轮、直动滚子从动件、正负偏置、恒定正转速 |
 | 核心语言 | MoonBit：运动学、几何、采样、搜索、判定、校验与导出 |
+| 网页工作台 | 运动段表格、逐段规律、实时校验、问题定位、三档采样比较 |
 | 输入 → 输出 | JSON / MoonBit 类型 → 分析报告、点数据、CSV、SVG、毫米制 DXF |
 | 通过的含义 | 局部采样约束满足，且采样折线检查完成、确定零交叉 |
 | 不确定时 | 单独报告；不解释成通过，也不宣称物理不可行 |
@@ -32,15 +35,46 @@ moon run examples/library --target wasm-gc
 
 以上只需要 MoonBit，不需要 Node.js。`examples/library` 直接调用类型化库，输出默认案例的最大压力角、最小局部偏置因子和点数。
 
-使用 CLI 和网页时，再安装 Node.js 22 或更新版本：
+### 打开网页工作台
+
+使用网页或 CLI 时，还需安装 Node.js 22 或更新版本。在仓库根目录运行：
+
+```sh
+npm run build
+npm run serve
+```
+
+终端出现 `MoonCam: http://127.0.0.1:4173/` 后，用**同一台电脑的浏览器**打开 [本地工作台](http://127.0.0.1:4173/)。保持服务终端运行；按 `Ctrl+C` 会停止服务。`127.0.0.1` 指当前电脑，只有启动本地服务后才能访问。
+
+首次构建或修改 MoonBit 源码后需执行 `npm run build`，生成网页计算引擎。以后重新打开工作台，在仓库根目录运行 `npm run serve` 即可。运行工作台无需安装 npm 开发依赖。
+
+首次使用可按[完整操作案例](docs/完整操作案例.md)完成一轮操作：
+
+1. 选择“小基圆 · 压力角不满足”，在表格中查看升程、停歇和回程；每段可独立选择规律，MoonBit 返回闭合校验与行内错误。
+2. 点击“计算轮廓”，查看超限原因并定位到相应运动段、采样点和曲线转角。
+3. 搜索基圆尺寸，将返回的候选半径填回左侧参数，勾选三档采样比较并重新计算。
+4. 保存输入配置、JSON 报告，以及所需的 CSV、SVG 或 DXF。修改参数后应重新计算，图表和下载对应上次提交计算时的参数。
+
+### 只运行命令行
+
+无需启动网页服务，构建后直接执行：
 
 ```sh
 npm run build
 node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop
-npm run serve
 ```
 
-访问 `http://127.0.0.1:4173/`。网页用表格编辑运动段，每段独立选择规律，MoonBit 实时校验总转角、回零与累计升程；高级入口支持分段 JSON 导入。第一次使用可打开工作台中的完整案例教程。运行上述流程无需安装 npm 开发依赖。输出目录包含 `profile.svg`、`profile.csv`、`profile.dxf`、`report.json`、`input.json`。
+输出目录包含 `profile.svg`、`profile.csv`、`profile.dxf`、`report.json`、`input.json`。
+
+### 本地页面打不开时
+
+| 现象 | 检查与处理 |
+| --- | --- |
+| 浏览器提示无法连接 | 在仓库根目录运行 `npm run serve`，确认终端出现监听地址且没有退出 |
+| 重启电脑或关闭终端后无法连接 | 重新运行 `npm run serve`；本地服务不会随电脑启动自动运行 |
+| 提示 `EADDRINUSE` | 4173 端口已被占用；若已有 MoonCam 服务，直接访问，否则先确认并处理占用进程 |
+| 页面能打开，但引擎加载失败 | 执行 `npm run build`，通过上述 HTTP 地址访问并刷新页面 |
+| 另一台电脑无法用这个地址访问 | `127.0.0.1` 指向访问者自己的电脑；当前服务只监听本机 |
 
 CLI 退出码：`0` 表示局部条件通过且折线交叉检查完成、未发现交叉；`2` 表示采样检查拒绝；`3` 表示搜索未找到候选；`4` 表示检查未完成；`1` 表示输入或运行错误。通过采样检查不等于连续轮廓全局无干涉或制造认证。
 
@@ -96,11 +130,20 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 - [设计取舍](docs/设计取舍.md)：采样、搜索、容差、输出和兼容策略。
 - [判定验收](docs/判定验收.md)：固定几何案例、预期状态和验收命令。
 
-GitHub Actions 检查格式、公共接口快照、四个后端测试、接口/CLI、独立数值、DXF 和桌面/手机浏览器，并保存性能观测。实际运行状态以仓库 Actions 页面为准。
+截至 2026-10-23 的验证记录：
+
+| 验证 | 已通过的范围 |
+| --- | --- |
+| MoonBit 单元与性质测试 | 49 组，JS、Wasm、Wasm-GC、Native 四后端分别执行 |
+| 接口、CLI 与导出 | 21 组集成测试 |
+| 浏览器操作 | 11 组，覆盖桌面、手机、兼容模式、表格、定位、比较与完整导出流程 |
+| 独立数值对照 | 18 组参数、432 个接触点 |
+
+GitHub Actions 还检查格式、公共接口快照和 DXF 独立读取，并保存性能观测。当前状态见 [Actions](https://github.com/huahai29/mooncam/actions/workflows/ci.yml)，具体方法与适用范围见[验证记录](docs/验证记录.md)。
 
 ## 适用边界
 
-`sampled_local_feasible` 只表示局部条件；`sampled_feasible` 还要求折线交叉检查完成且计数为零。`crossing_check` 明确区分完成、不确定、失败和未检查。折线判定不代表连续轮廓没有采样间回环或非局部滚轮干涉。应提高分辨率检查收敛；采样不能替代连续极值求解。
+`sampled_local_feasible` 只表示局部条件；`sampled_feasible` 还要求折线交叉检查完成且计数为零。`crossing_check` 明确区分完成、不确定、失败和未检查。折线判定不代表连续轮廓没有采样间回环或非局部滚轮干涉。可以提高分辨率比较采样敏感性；数值稳定不构成收敛证明，采样不能替代连续极值求解。
 
 当前不包含强度、载荷、弹簧预紧、磨损、弹性和公差分析。DXF 是离散轮廓交换文件，未承诺可直接加工。详见 [算法与适用范围](docs/算法与适用范围.md)。
 
@@ -112,6 +155,6 @@ GitHub Actions 检查格式、公共接口快照、四个后端测试、接口/C
 
 ## 0.2 版本接口变化
 
-当前包版本为 0.2.0，JSON schema 为 2。默认只返回点数据和摘要；通过 `outputs` 选择 points / csv / svg / dxf，空数组仅返回摘要，`include_input` 控制输入回显。CLI 自动按需请求格式，报告只保存摘要与文件引用。响应中的名义分辨率改为 `sampling.nominal_resolution`（请求仍使用 `resolution`），实际点数另行报告；根切角字段改名为 `min_offset_factor_angle`。旧版本调用方需按 [输入输出说明](docs/输入输出说明.md) 迁移。
+当前包版本为 0.2.0，JSON schema 为 2。默认只返回点数据和摘要；通过 `outputs` 选择 points / csv / svg / dxf，空数组仅返回摘要，`include_input` 控制输入回显。CLI 自动按需请求格式，报告只保存摘要与文件引用。响应中的名义分辨率改为 `sampling.nominal_resolution`（请求仍使用 `resolution`），实际点数另行报告；JSON 根切角字段改名为 `min_offset_factor_angle_rad`。旧版本调用方需按 [输入输出说明](docs/输入输出说明.md) 迁移。
 
 历史优化核查见 [优化核查记录](docs/优化核查记录.md)；当前接口与状态以 [接口契约](docs/接口契约.md) 为准。
