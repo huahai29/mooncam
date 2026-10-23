@@ -22,6 +22,9 @@ function receive(data, generation) {
     $('intervals').max = limits.search_intervals_max;
     $('base').min = limits.base_radius_min; $('base').max = limits.geometry_length_max;
     $('roller').max = limits.geometry_length_max;
+    $('compare-sampling').disabled = degraded;
+    if (degraded) $('compare-sampling').checked = false;
+    $('compatibility-notice').hidden = !degraded;
     ready = true; editor.setLimit(limits.segments_max); editor.check(); busy(false); setStatus(degraded ? '兼容模式：MoonBit 引擎在主线程运行，计算期间页面可能暂停响应。' : '计算引擎已就绪'); return; }
   if (validationPending?.id === data.id) {
     const task = validationPending; validationPending = undefined;
@@ -77,7 +80,7 @@ function dispatch(task) {
 }
 function configuration(action) {
   const segments = editor.values();
-  return {action, units:'mm', compare_sampling:$('compare-sampling').checked, base_radius_mm:Number($('base').value), roller_radius_mm:Number($('roller').value), offset_mm:Number($('offset').value), rpm:Number($('rpm').value), pressure_limit_deg:Number($('limit').value), resolution:Number($('resolution').value), segments,
+  return {action, units:'mm', compare_sampling:!degraded && $('compare-sampling').checked, base_radius_mm:Number($('base').value), roller_radius_mm:Number($('roller').value), offset_mm:Number($('offset').value), rpm:Number($('rpm').value), pressure_limit_deg:Number($('limit').value), resolution:Number($('resolution').value), segments,
     ...(action === 'search' ? {search:{lower_mm:Number($('lower').value),upper_mm:Number($('upper').value),intervals:Number($('intervals').value)}} : {})};
 }
 function calculate(action) {

@@ -54,12 +54,20 @@ test('worker responses are tied to a request and changed inputs stay visibly sta
  await expect(page.locator('#metrics')).toContainText('40.00 mm');
 });
 
-test('missing Worker has a functional MoonBit compatibility mode',async({page})=>{
+test('missing Worker disables comparison while single analysis and exports remain functional',async({page})=>{
  await page.addInitScript(()=>{window.Worker=undefined;});
  await page.goto('/');await expect(page.locator('#status')).toContainText('兼容模式');
+ await expect(page.locator('#compare-sampling')).toBeDisabled();
+ await expect(page.locator('#compare-sampling')).not.toBeChecked();
+ await expect(page.locator('#compatibility-notice')).toBeVisible();
+ // Request construction must enforce the policy even if a script changes DOM state.
+ await page.locator('#compare-sampling').evaluate(el=>{el.checked=true;});
  await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('满足约束');
  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="csv"]').click()]);
  expect(download.suggestedFilename()).toBe('mooncam.csv');
+ const [report]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="json"]').click()]);
+ const {readFile}=await import('node:fs/promises');const result=JSON.parse(await readFile(await report.path(),'utf8'));
+ expect(result.input.compare_sampling).toBe(false);expect(result.result.sampling_comparison).toBeUndefined();
 });
 
 test('late duplicate response cannot overwrite a later calculation',async({page})=>{
@@ -197,4 +205,30 @@ test('live validation keeps cached exports and rapid edits use latest totals on 
  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="csv"]').click()]);expect(download.suggestedFilename()).toBe('mooncam.csv');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:'test-results/segment-editor-mobile.png',fullPage:true});
+});
+
+test('runtime Worker failure cancels an already selected sampling comparison',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{
+  const Original=window.Worker;
+  window.Worker=class extends Original {
+   postMessage(task){
+    if(task.kind==='calculate'&&!this.failed){this.failed=true;queueMicrotask(()=>this.onerror?.(new Event('error')));}
+    else super.postMessage(task);
+   }
+  };
+ });
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await expect(page.locator('#compare-sampling')).toBeEnabled();
+ await page.locator('#compare-sampling').check();await page.locator('#analyze').click();
+ await expect(page.locator('#status')).toContainText('兼容模式');
+ await expect(page.locator('#compare-sampling')).toBeDisabled();await expect(page.locator('#compare-sampling')).not.toBeChecked();
+ await expect(page.locator('#compatibility-notice')).toContainText('无法强制超时中断');
+ await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('满足约束');
+ await expect(page.locator('#comparison-panel')).toBeHidden();
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="json"]').click()]);
+ const {readFile}=await import('node:fs/promises');const result=JSON.parse(await readFile(await download.path(),'utf8'));
+ expect(result.input.compare_sampling).toBe(false);expect(result.result.sampling_comparison).toBeUndefined();
+ await expect(page.locator('#compatibility-notice')).toBeVisible();expect(errors).toEqual([]);
+ await page.locator('.settings').screenshot({path:'test-results/compatibility-mode.png'});
 });

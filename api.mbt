@@ -267,8 +267,19 @@ fn reason_codes(a : Analysis, d : Diagnostics) -> Array[String] {
 }
 
 ///|
-fn edge_json(p : Program, points : Array[CamPoint], index : Int32) -> Json {
-  let edge = locate_edge(p, points, index).unwrap()
+fn edge_json(
+  p : Program,
+  points : Array[CamPoint],
+  index : Int32,
+) -> Json raise RequestError {
+  let edge = match locate_edge(p, points, index) {
+    Ok(edge) => edge
+    Err(message) =>
+      raise RequestError(
+        InternalError,
+        "cannot encode profile edge \{index}: \{message}",
+      )
+  }
   {
     "edge_index": Json(index),
     "segment_index": Json(edge.segment_index),
@@ -314,9 +325,24 @@ fn report(
   outputs : Array[String],
   p : Program,
   pressure_limit : Double,
-) -> Json {
+) -> Json raise RequestError {
   let state = a.state()
-  let diagnostics = diagnose(p, a, pressure_limit).unwrap()
+  let diagnostics = match diagnose(p, a, pressure_limit) {
+    Ok(value) => value
+    Err(message) =>
+      raise RequestError(
+        InternalError,
+        "cannot encode report diagnostics: \{message}",
+      )
+  }
+  let witnesses : Array[Json] = []
+  for w in a.crossing_witnesses {
+    witnesses.push({
+      "kind": Json(w.kind),
+      "edge_a": edge_json(p, a.points, w.edge_a),
+      "edge_b": edge_json(p, a.points, w.edge_b),
+    })
+  }
   let fields : Map[String, Json] = {
     "schema_version": Json(Schema_version),
     "units": Json("mm"),
@@ -341,15 +367,7 @@ fn report(
       }),
     ),
     "crossing_evidence": {
-      "witnesses": Json(
-        a.crossing_witnesses.map(fn(w) {
-          {
-            "kind": Json(w.kind),
-            "edge_a": edge_json(p, a.points, w.edge_a),
-            "edge_b": edge_json(p, a.points, w.edge_b),
-          }
-        }),
-      ),
+      "witnesses": Json(witnesses),
       "truncated": Json(a.crossing_witnesses_truncated),
       "limit": Json(Crossing_witnesses_max),
     },

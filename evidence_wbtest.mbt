@@ -1,5 +1,5 @@
 ///|
-test "topology witnesses identify actual edge pairs without intersection coordinates" {
+test "G17 topology witnesses identify actual edge pairs without intersection coordinates" {
   let points = polygon([
     (0.0, 0.0),
     (2.0, 2.0),
@@ -22,7 +22,7 @@ test "topology witnesses identify actual edge pairs without intersection coordin
 }
 
 ///|
-test "bounded evidence retains full counts after truncation and indices remain valid" {
+test "G18 bounded evidence retains full counts after truncation and indices remain valid" {
   let points : Array[CamPoint] = []
   let seed = polygon([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (0.0, 0.0)])[0]
   let n = 71
@@ -44,14 +44,16 @@ test "bounded evidence retains full counts after truncation and indices remain v
   for w in r.witnesses {
     assert_true(w.edge_a >= 0 && w.edge_a < n)
     assert_true(w.edge_b >= 0 && w.edge_b < n)
-    assert_true(
-      locate_edge(example_program(Polynomial4567), points, w.edge_a) is Ok(_),
-    )
+    for index in [w.edge_a, w.edge_b] {
+      assert_true(
+        locate_edge(example_program(Polynomial4567), points, index) is Ok(_),
+      )
+    }
   }
 }
 
 ///|
-test "uncertain evidence is located in JSON without claiming exact intersection points" {
+test "G19 uncertain evidence is located in JSON without claiming exact intersection points" {
   let p = example_program(Polynomial4567)
   let g : Geometry = { base_radius: 40.0, roller_radius: 4.0, offset: 0.0, }
   let points = polygon([
@@ -93,4 +95,93 @@ test "uncertain evidence is located in JSON without claiming exact intersection 
       assert_eq(edge.get("segment_index"), Some(Json(location.segment_index)))
     }
   }
+}
+
+///|
+test "report edge encoder preserves invalid index and angle causes without panic" {
+  let p = example_program(Polynomial4567)
+  let points = sample(
+    p,
+    { base_radius: 40.0, roller_radius: 4.0, offset: 0.0, },
+    72,
+  ).unwrap()
+  for index in [-1, points.length() - 1, points.length()] {
+    let response = edge_json(p, points, index).stringify() catch {
+      RequestError(code, message) => error_json(code, message)
+    }
+    guard @json.parse(response) is Object(fields) else { fail("error object") }
+    assert_eq(fields.get("ok"), Some(Json(false)))
+    assert_eq(fields.get("error_code"), Some(Json("internal_error")))
+    guard fields.get("error") is Some(String(message)) else { fail("message") }
+    assert_true(message.contains("edge index out of range"))
+    assert_true(message.contains(index.to_string()))
+  }
+  let invalid = points.map(fn(point) { { ..point, theta: -1.0, } })
+  let response = edge_json(p, invalid, 0).stringify() catch {
+    RequestError(code, message) => error_json(code, message)
+  }
+  guard @json.parse(response) is Object(fields) else { fail("error object") }
+  assert_eq(fields.get("error_code"), Some(Json("internal_error")))
+  guard fields.get("error") is Some(String(message)) else { fail("message") }
+  assert_true(message.contains("cannot encode profile edge 0"))
+  assert_true(message.contains("location angle must be in [0, 2pi]"))
+}
+
+///|
+test "report rejects inconsistent diagnostics and witnesses through typed errors" {
+  let p = example_program(Polynomial4567)
+  let g : Geometry = { base_radius: 40.0, roller_radius: 4.0, offset: 0.0, }
+  let a = analyze(p, g, 72, 0.6, 1.0).unwrap()
+  let broken = [
+    { ..a, pressure_sample_index: a.points.length(), },
+    {
+      ..a,
+      crossing_witnesses: [
+        { kind: "proper_crossing", edge_a: 0, edge_b: a.points.length(), },
+      ],
+    },
+  ]
+  for i = 0; i < broken.length(); i = i + 1 {
+    let response = report(broken[i], g, 1.0, [], p, 0.6).stringify() catch {
+      RequestError(code, message) => error_json(code, message)
+    }
+    guard @json.parse(response) is Object(fields) else { fail("error object") }
+    assert_eq(fields.get("error_code"), Some(Json("internal_error")))
+    guard fields.get("error") is Some(String(message)) else { fail("message") }
+    assert_true(
+      message.contains(
+        if i == 0 {
+          "sample index out of range"
+        } else {
+          "edge index out of range"
+        },
+      ),
+    )
+  }
+}
+
+///|
+test "count convenience API agrees with detailed reports and never hides uncertainty" {
+  let square = polygon([
+    (0.0, 0.0),
+    (1.0, 0.0),
+    (1.0, 1.0),
+    (0.0, 1.0),
+    (0.0, 0.0),
+  ])
+  let uncertain = polygon([
+    (0.0, 0.0),
+    (2.0, 0.0),
+    (1.0, 0.0),
+    (1.0, 2.0),
+    (0.0, 0.0),
+  ])
+  assert_eq(
+    profile_crossings(square),
+    Ok(crossing_report(square).unwrap().crossings),
+  )
+  assert_true(crossing_report(uncertain).unwrap().uncertain_pairs > 0)
+  assert_true(profile_crossings(uncertain) is Err(_))
+  assert_true(crossing_report([]) is Err(_))
+  assert_true(profile_crossings([]) is Err(_))
 }

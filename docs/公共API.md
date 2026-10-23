@@ -55,6 +55,12 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 
 CSV 含 `ds_dtheta` 等角导数；JSON 的 velocity / acceleration / jerk 已乘转速转换为时间导数。闭合点采用周期右侧值（第零段起点），最大跃度另检查两侧段端点；末行跃度不能解释为末段左极限。
 
+## 两个拓扑入口的区别
+
+`crossing_report` 是需要分类和证据时的首选：`Result` 的 Err 表示检查失败；Ok 中保留 `crossings`、`uncertain_pairs` 及有上限的边对证据。不确定是已完成检查中的一种几何结果，不能当成确定零交叉。
+
+`profile_crossings` 是公开保留的兼容简化入口，并非测试专用。它只在检查确定时返回 `Ok(count)`；不确定和检查失败都返回 `Err(String)`。这是较窄的返回能力，不是另一套几何规则。调用方不得将 Err 当作零，也不应解析字符串区分原因；有分类需求应改用 `crossing_report`。完整分析再由 `CrossingCheck` 表达四种状态。
+
 ## 表格编辑与分段校验
 
 `validate_segments_json(input : String) -> String` 接受 JSON **分段数组**，每段含 `angle_deg`、`lift_mm`、`law`，不是完整分析请求。桥接入口名为 `validate_segments`。字节和段数上限与完整请求同源，未知字段同样拒绝。

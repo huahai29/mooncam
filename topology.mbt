@@ -223,7 +223,10 @@ pub fn crossing_report(
 }
 
 ///|
-/// A complete Result is required; errors must not be interpreted as zero.
+/// Compatibility convenience API returning a count only for a determinate check.
+/// Err includes both uncertain contacts and failed checks; never treat it as zero
+/// or parse its message for classification. Prefer crossing_report for structured
+/// uncertainty counts and bounded edge witnesses.
 pub fn profile_crossings(points : Array[CamPoint]) -> Result[Int32, String] {
   match crossing_report(points) {
     Ok(r) =>
