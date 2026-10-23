@@ -62,6 +62,8 @@ pub fn timed(Program, Double, Double) -> Result[Motion, String]
 
 pub fn validate_geometry(Geometry) -> Result[Unit, String]
 
+pub fn validate_segments_json(String) -> String
+
 // Errors
 
 // Types and methods

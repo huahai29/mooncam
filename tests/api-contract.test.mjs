@@ -4,7 +4,7 @@ import{readFileSync,mkdtempSync,readdirSync,writeFileSync}from'node:fs';
 import{tmpdir}from'node:os';
 import{join,resolve}from'node:path';
 import{spawnSync}from'node:child_process';
-import{run,input_limit_bytes,export_profile,contract,error_exit_code}from'../web/engine.js';
+import{run,input_limit_bytes,export_profile,contract,error_exit_code,validate_segments}from'../web/engine.js';
 const base=JSON.parse(readFileSync(new URL('../examples/workshop.json',import.meta.url),'utf8'));
 const call=x=>JSON.parse(run(JSON.stringify(x)));
 const cli=(path,...args)=>spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),path,...args],{encoding:'utf8'});
@@ -178,4 +178,18 @@ test('search compares the fixed final candidate with independent per-resolution 
   const independent=call({...base,base_radius_mm:r.result.base_radius_mm,resolution:level.nominal_resolution,outputs:[]}).result;
   assert.deepEqual(level.pressure,independent.diagnostics.pressure);
  }
+});
+
+test('live segment validation preserves mixed laws and does not replace session exports',()=>{
+ const segments=base.segments.map((s,i)=>({...s,law:i===0?'345':i===2?'cycloidal':'4567'}));
+ const result=call({...base,segments});assert.equal(result.ok,true);
+ const before=export_profile('csv');
+ const validate=x=>JSON.parse(validate_segments(JSON.stringify(x)));
+ assert.equal(validate(segments).ok,true);
+ assert.equal(validate(segments).total_angle_deg,360);
+ assert.equal(validate(segments.slice(1)).ok,false);
+ assert.equal(validate([{angle_deg:360,lift_mm:0,law:'345',extra:1}]).field,'segments[0].extra');
+ assert.equal(validate([{angle_deg:360,lift_mm:null,law:'345'}]).field,'segments[0].lift_mm');
+ assert.equal(validate(Array.from({length:129},()=>({angle_deg:360/129,lift_mm:0,law:'345'}))).ok,false);
+ assert.equal(export_profile('csv'),before);
 });

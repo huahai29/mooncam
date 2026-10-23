@@ -10,6 +10,7 @@ options(
     "js": {
       "exports": [
         "run",
+        "validate_segments",
         "input_limit_bytes",
         "export_profile",
         "contract",

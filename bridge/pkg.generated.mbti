@@ -14,6 +14,8 @@ pub fn result_exit_code(String) -> Int
 
 pub fn run(String) -> String
 
+pub fn validate_segments(String) -> String
+
 // Errors
 
 // Types and methods

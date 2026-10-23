@@ -6,6 +6,7 @@ test('Chinese workbench computes, reports failures, searches and exports',async(
  await page.locator('#analyze').click();
  await expect(page.locator('#metrics')).toContainText('满足约束');
  await expect(page.locator('#profile svg')).toHaveCount(1);
+ await expect(page.locator('#segment-summary')).toContainText('分段程序通过校验');
  await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:'test-results/workbench-desktop.png',fullPage:true});
  await page.locator('#phase').fill('100');await page.locator('#phase').dispatchEvent('input');
@@ -17,7 +18,8 @@ test('Chinese workbench computes, reports failures, searches and exports',async(
  await page.locator('#search').click();
  await expect(page.locator('#status')).toContainText('网格位置');
  await expect(page.locator('#metrics')).toContainText('满足约束');
- await page.locator('#segments').fill('[]');await page.locator('#analyze').click();
+ while(await page.locator('#segment-rows tr').count())await page.locator('#segment-rows tr').first().getByRole('button').click();
+ await page.locator('#analyze').click();
  await expect(page.locator('#status')).toContainText('program requires');
  expect(errors).toEqual([]);
 });
@@ -26,10 +28,13 @@ test('mobile layout remains usable and inputs with unknown fields fail',async({p
  await expect(page.locator('#analyze')).toBeEnabled();await page.locator('#analyze').click();
  await expect(page.locator('#metrics')).toContainText('满足约束');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await expect(page.locator('#segment-summary')).toContainText('分段程序通过校验');
  await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:'test-results/workbench-mobile.png',fullPage:true});
- await page.locator('#segments').fill('[{"angle_deg":360,"lift_mm":0,"extra":1}]');
- await page.locator('#analyze').click();await expect(page.locator('#status')).toContainText('unknown field');
+ await page.locator('#json-options summary').click();
+ await page.locator('#segments').fill('[{"angle_deg":360,"lift_mm":0,"law":"345","extra":1}]');
+ await page.locator('#apply-segments').click();await expect(page.locator('#import-status')).toContainText('导入失败');
+ await expect(page.locator('#segment-rows tr')).toHaveCount(4);
 });
 
 test('worker responses are tied to a request and changed inputs stay visibly stale',async({page})=>{
@@ -63,7 +68,7 @@ test('late duplicate response cannot overwrite a later calculation',async({page}
   window.Worker=class extends Original {
    constructor(...args){super(...args);super.addEventListener('message',event=>{
     event.stopImmediatePropagation();const data=event.data;this.deliver?.({data});
-    if(data.id===1)setTimeout(()=>this.deliver?.({data}),800);
+    if(data.response?.result&&!this.duplicated){this.duplicated=true;setTimeout(()=>this.deliver?.({data}),800);}
    });}
    set onmessage(fn){this.deliver=fn;}
   };
@@ -128,4 +133,68 @@ test('actual crossing evidence highlights both identified edges and clears after
  await expect(page.locator('.witness-edge')).toHaveCount(0);
  await expect(page.locator('[data-witness]')).toHaveCount(0);
  expect(errors).toEqual([]);
+});
+
+test('segment table preserves per-row laws through import and saved input; errors mark the row',async({page})=>{
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await expect(page.locator('#segment-summary')).toContainText('分段程序通过校验');
+ const rows=page.locator('#segment-rows tr');
+ await rows.nth(0).locator('[data-field="angle_deg"]').fill('');
+ await expect(rows.nth(0).locator('[data-field="angle_deg"]')).toHaveAttribute('aria-invalid','true');
+ await rows.nth(0).locator('[data-field="angle_deg"]').fill('60');
+ await expect(page.locator('#segment-summary')).toContainText('总转角 330°');
+ await rows.nth(1).locator('[data-field="angle_deg"]').fill('120');
+ await rows.nth(0).locator('[data-field="law"]').selectOption('345');
+ await rows.nth(2).locator('[data-field="law"]').selectOption('cycloidal');
+ await expect(page.locator('#segment-summary')).toContainText('分段程序通过校验');
+ await page.locator('#json-options summary').click();
+ const segments=JSON.parse(await page.locator('#segments').inputValue());
+ await rows.nth(3).getByRole('button').click();await expect(rows).toHaveCount(3);
+ await page.locator('#segments').fill(JSON.stringify(segments));await page.locator('#apply-segments').click();
+ await expect(rows).toHaveCount(4);await expect(rows.nth(2).locator('[data-field="law"]')).toHaveValue('cycloidal');
+ await page.locator('#analyze').click();await expect(page.locator('#profile svg')).toHaveCount(1);
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#save-input').click()]);
+ const {readFile}=await import('node:fs/promises');const saved=JSON.parse(await readFile(await download.path(),'utf8'));
+ expect(saved.segments).toEqual(segments);
+ await page.locator('#add-segment').click();await expect(rows).toHaveCount(5);
+ await rows.last().getByRole('button').click();await expect(rows).toHaveCount(4);
+ await page.screenshot({path:'test-results/segment-editor.png',fullPage:true});
+});
+
+test('walkthrough failure, location, candidate search, sampling comparison and export',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#preset').selectOption('pressure-limit');await expect(page.locator('#base')).toHaveValue('5');
+ await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('需调整');
+ await page.locator('[data-locate="pressure"]').click();await expect(page.locator('#angle')).toHaveText('35.5°');
+ await page.locator('#search').click();await expect(page.locator('#metrics')).toContainText('36.00 mm');
+ await expect(page.locator('#base')).toHaveValue('5');
+ await page.locator('#base').fill('36');await page.locator('#compare-sampling').check();await page.locator('#analyze').click();
+ await expect(page.locator('#comparison tbody tr')).toHaveCount(3);await expect(page.locator('#metrics')).toContainText('满足约束');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="dxf"]').click()]);expect(download.suggestedFilename()).toBe('mooncam.dxf');
+ await page.screenshot({path:'test-results/walkthrough-result.png',fullPage:true});
+ await page.goto('/web/tutorial.html');await expect(page.getByRole('heading',{level:2})).toHaveCount(5);
+ for(const link of await page.locator('a[download]').all()){const response=await page.request.get(await link.getAttribute('href'));expect(response.ok()).toBe(true);}
+ expect(errors).toEqual([]);
+});
+
+test('live validation keeps cached exports and rapid edits use latest totals on mobile',async({page})=>{
+ await page.addInitScript(()=>{
+  const Original=window.Worker;
+  window.Worker=class extends Original {
+   constructor(...args){super(...args);super.addEventListener('message',event=>{
+    event.stopImmediatePropagation();const data=event.data;
+    setTimeout(()=>this.deliver?.({data}),data.response?.total_angle_deg===280?700:0);
+   });}
+   set onmessage(fn){this.deliver=fn;}
+  };
+ });
+ await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('满足约束');
+ const angle=page.locator('#segment-rows tr').first().locator('[data-field="angle_deg"]');
+ await angle.fill('10');await page.waitForTimeout(200);await angle.fill('20');await angle.fill('90');
+ await expect(page.locator('#segment-summary')).toContainText('总转角 360°');await page.waitForTimeout(800);await expect(page.locator('#segment-summary')).toContainText('通过校验');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="csv"]').click()]);expect(download.suggestedFilename()).toBe('mooncam.csv');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/segment-editor-mobile.png',fullPage:true});
 });

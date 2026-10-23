@@ -13,7 +13,7 @@
 | 不确定时 | 单独报告；不解释成通过，也不宣称物理不可行 |
 | 搜索范围 | 有限网格首个通过复核的基圆候选，不是连续全局最优 |
 
-[公共 API](docs/公共API.md) · [输入输出](docs/输入输出说明.md) · [状态、上限与错误码](docs/接口契约.md) · [设计取舍](docs/设计取舍.md) · [固定验收用例](docs/判定验收.md)
+[第一次使用：完整操作案例](docs/完整操作案例.md) · [公共 API](docs/公共API.md) · [输入输出](docs/输入输出说明.md) · [状态、上限与错误码](docs/接口契约.md) · [设计取舍](docs/设计取舍.md) · [固定验收用例](docs/判定验收.md)
 
 运行时无需 Python、CAD 或远程服务；JavaScript 只承担 Node.js / 浏览器宿主对接。核心库可在 MoonBit 中直接使用。
 
@@ -40,7 +40,7 @@ node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop
 npm run serve
 ```
 
-访问 `http://127.0.0.1:4173/`。运行上述流程无需安装 npm 开发依赖。输出目录包含 `profile.svg`、`profile.csv`、`profile.dxf`、`report.json`、`input.json`。
+访问 `http://127.0.0.1:4173/`。网页用表格编辑运动段，每段独立选择规律，MoonBit 实时校验总转角、回零与累计升程；高级入口支持分段 JSON 导入。第一次使用可打开工作台中的完整案例教程。运行上述流程无需安装 npm 开发依赖。输出目录包含 `profile.svg`、`profile.csv`、`profile.dxf`、`report.json`、`input.json`。
 
 CLI 退出码：`0` 表示局部条件通过且折线交叉检查完成、未发现交叉；`2` 表示采样检查拒绝；`3` 表示搜索未找到候选；`4` 表示检查未完成；`1` 表示输入或运行错误。通过采样检查不等于连续轮廓全局无干涉或制造认证。
 

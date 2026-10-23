@@ -1,8 +1,16 @@
+import {segmentEditor} from './segments.mjs';
 import {renderDiagnostics} from './diagnostics.mjs';
 const $ = id => document.getElementById(id);
 let worker, timer, latest, latestInput, ready = false;
 let epoch = 0, sequence = 0, pending, revision = 0, degraded = false;
 let selectedEvidence;
+let validationPending;
+const editor = segmentEditor((input, callback) => {
+  if (!ready) return;
+  const id = ++sequence;
+  validationPending = {id,callback};
+  worker.postMessage({id,kind:'validate',input});
+}, () => {revision++; if(latest)setStatus('参数已修改，请重新计算。');});
 const buttons = [$('analyze'), $('search')];
 function busy(value) { for (const b of buttons) b.disabled = value; }
 function setStatus(message, error = false) { $('status').textContent = message; $('status').className = error ? 'bad' : 'good'; }
@@ -14,12 +22,16 @@ function receive(data, generation) {
     $('intervals').max = limits.search_intervals_max;
     $('base').min = limits.base_radius_min; $('base').max = limits.geometry_length_max;
     $('roller').max = limits.geometry_length_max;
-    ready = true; busy(false); setStatus(degraded ? '兼容模式：MoonBit 引擎在主线程运行，计算期间页面可能暂停响应。' : '计算引擎已就绪'); return; }
+    ready = true; editor.setLimit(limits.segments_max); editor.check(); busy(false); setStatus(degraded ? '兼容模式：MoonBit 引擎在主线程运行，计算期间页面可能暂停响应。' : '计算引擎已就绪'); return; }
+  if (validationPending?.id === data.id) {
+    const task = validationPending; validationPending = undefined;
+    task.callback(data.response || {ok:false,error:data.error}); return;
+  }
   if (!pending || data.id !== pending.id) return;
   const task = pending; pending = undefined;
   clearTimeout(timer); busy(false);
   for (const b of document.querySelectorAll('[data-export]')) b.disabled = !latest;
-  if (data.error || !data.response?.ok) { setStatus(data.error || `${data.response.field ? data.response.field + '：' : ''}${data.response.error}`, true); return; }
+  if (data.error || !data.response?.ok) { if(task.kind !== 'export') editor.check(); setStatus(data.error || `${data.response.field ? data.response.field + '：' : ''}${data.response.error}`, true); return; }
   if (task.kind === 'export') { download(`mooncam.${task.format}`, data.response.content, task.format === 'svg' ? 'image/svg+xml' : 'text/plain'); return; }
   latest = data.response; render();
   setStatus(latest.result.sampled_feasible ? '采样局部约束通过，轮廓交叉检查完成且未发现交叉。' : '采样约束不满足、发现轮廓交叉或检查无法确定，请查看各项状态。', !latest.result.sampled_feasible);
@@ -33,7 +45,7 @@ async function fallback(generation) {
     degraded = true;
     worker = {postMessage(task) { queueMicrotask(() => {
       if (generation !== epoch) return;
-      try { receive({id: task.id, response: JSON.parse(task.kind === 'export' ? engine.export_profile(task.format) : engine.run(task.input))}, generation); }
+      try { receive({id: task.id, response: JSON.parse(task.kind === 'validate' ? engine.validate_segments(task.input) : task.kind === 'export' ? engine.export_profile(task.format) : engine.run(task.input))}, generation); }
       catch (error) { receive({id: task.id, error: error.message}, generation); }
     }); }, terminate() {}};
     receive({ready: true, contract: JSON.parse(engine.contract())}, generation);
@@ -64,7 +76,7 @@ function dispatch(task) {
   worker.postMessage({...task, id});
 }
 function configuration(action) {
-  const segments = JSON.parse($('segments').value).map(s => ({...s, law:$('law').value}));
+  const segments = editor.values();
   return {action, units:'mm', compare_sampling:$('compare-sampling').checked, base_radius_mm:Number($('base').value), roller_radius_mm:Number($('roller').value), offset_mm:Number($('offset').value), rpm:Number($('rpm').value), pressure_limit_deg:Number($('limit').value), resolution:Number($('resolution').value), segments,
     ...(action === 'search' ? {search:{lower_mm:Number($('lower').value),upper_mm:Number($('upper').value),intervals:Number($('intervals').value)}} : {})};
 }
@@ -197,8 +209,7 @@ async function preset() {
   try {
     const response=await fetch(`../examples/${$('preset').value}.json`); if(!response.ok)throw new Error('算例加载失败'); const p=await response.json(); if (token !== presetSequence) return;
     for(const [id,key] of Object.entries({base:'base_radius_mm',roller:'roller_radius_mm',offset:'offset_mm',rpm:'rpm',limit:'pressure_limit_deg',resolution:'resolution'}))$(id).value=p[key];
-    $('law').value=p.segments[0].law;
-    $('segments').value=JSON.stringify(p.segments.map(({angle_deg,lift_mm})=>({angle_deg,lift_mm})),null,2);
+    editor.load(p.segments);
     $('search-options').open=p.action==='search';
     if(p.search)for(const [id,key]of Object.entries({lower:'lower_mm',upper:'upper_mm',intervals:'intervals'}))$(id).value=p.search[key];
   }catch(e){setStatus(e.message,true);}

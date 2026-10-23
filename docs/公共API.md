@@ -20,6 +20,7 @@
 | 检查已有轮廓 | `crossing_report`、`profile_crossings` | 前者保留确定/不确定对数、访问计数和有上限的边对证据；后者有任何不确定项就返回 Err |
 | 导出自建点数组 | `checked_export` | 校验数值、实际点数与闭合性，不执行可行性认证；允许导出用于诊断的拒绝轮廓 |
 | 格式化已验证样本 | `csv`、`svg`、`dxf_mm` | 低层格式函数不校验；CSV 是角导数，不能用于任意未校验外部点数组 |
+| 仅校验分段输入 | `validate_segments_json` | 不采样、不修改会话缓存，复用 JSON 解码与 program 校验，返回总量及首个错误路径 |
 | 无状态 JSON 对接 | `run_json` | 返回 JSON 字符串，错误不以抛出异常作为正常接口 |
 | 计算一次、按需导出 | `session`、`Session::run`、`Session::export_profile` | 每个用户/任务独立会话；新请求先清空旧缓存，失败后不可下载旧结果 |
 | 宿主读取约束与退出码 | `contract_json`、`input_limit_bytes`、`error_exit_code`、`result_exit_code` | 直接读取 MoonBit 定义；未知错误/结果均退出 1 |
@@ -53,6 +54,19 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 `Analysis.sampled_feasible` 只有局部条件通过且确定零交叉时才为 true。`Analysis::state()` 将局部条件和拓扑状态组合为综合状态。`Indeterminate` 不等于数值崩溃；`Failed` 则表示检查没能完成。完整状态表、上限与错误码见[接口契约](接口契约.md)。
 
 CSV 含 `ds_dtheta` 等角导数；JSON 的 velocity / acceleration / jerk 已乘转速转换为时间导数。闭合点采用周期右侧值（第零段起点），最大跃度另检查两侧段端点；末行跃度不能解释为末段左极限。
+
+## 表格编辑与分段校验
+
+`validate_segments_json(input : String) -> String` 接受 JSON **分段数组**，每段含 `angle_deg`、`lift_mm`、`law`，不是完整分析请求。桥接入口名为 `validate_segments`。字节和段数上限与完整请求同源，未知字段同样拒绝。
+
+| 响应字段 | 含义 |
+| --- | --- |
+| `ok`、`schema_version` | 分段程序是否有效，以及同一接口 schema 版本；不代表机构可行 |
+| `segment_count` | 仅成功时返回有效段数 |
+| `total_angle_deg`、`total_lift_mm` | 数值数组的总转角与总升程，允许在程序不闭合时返回；类型不合法或总量非有限数时省略 |
+| `error_code`、`error`、`field` | 失败时沿用统一错误分类、消息、字段路径；字段路径从零编号，网页显示从 1 编号 |
+
+校验复用 `decode_program` 与 `program`，检查运动规律、数值范围、累计升程非负、总角度和回零。返回首个错误；仅整体闭合错误时，路径为 `segments`。它不会运行几何与采样，不会清空 Session 导出缓存。完整请求的累计升程非法现在同样定位到对应段的 `lift_mm`。
 
 ## 位置与诊断的调用约定
 
@@ -99,6 +113,7 @@ pub fn session() -> Session
 pub fn svg(Array[CamPoint]) -> String
 pub fn timed(Program, Double, Double) -> Result[Motion, String]
 pub fn validate_geometry(Geometry) -> Result[Unit, String]
+pub fn validate_segments_json(String) -> String
 pub fn Analysis::state(Self) -> String
 pub fn CrossingCheck::status(Self) -> String
 pub fn ErrorCode::code(Self) -> String

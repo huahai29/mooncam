@@ -35,3 +35,8 @@ pub fn error_exit_code(code : String) -> Int32 {
 pub fn result_exit_code(state : String) -> Int32 {
   @cam.result_exit_code(state)
 }
+
+///|
+pub fn validate_segments(input : String) -> String {
+  @cam.validate_segments_json(input)
+}

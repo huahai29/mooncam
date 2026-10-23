@@ -106,6 +106,7 @@ fn decode_program(value : Json) -> Program raise {
     raise FieldError("segments", "too many segments")
   }
   let segments : Array[Segment] = []
+  let mut height = 0.0
   for i = 0; i < items.length(); i = i + 1 {
     located("segments[\{i}]", fn() raise {
       let f = obj(items[i], ["angle_deg", "lift_mm", "law"])
@@ -127,6 +128,12 @@ fn decode_program(value : Json) -> Program raise {
         raise FieldError(
           "angle_deg",
           "segment angle must be finite and >= \{Segment_angle_min} rad",
+        )
+      }
+      height = height + lift
+      if !finite(height) || height < -1.0e-9 {
+        raise FieldError(
+          "lift_mm", "cumulative lift must stay nonnegative and finite",
         )
       }
       segments.push({ angle, lift, law, })
@@ -652,4 +659,79 @@ pub fn Session::export_profile(self : Session, format : String) -> String {
     "content": Json(content),
   }
   result.stringify()
+}
+
+///|
+/// Validate a JSON segment array without sampling or changing a Session cache.
+/// Totals are present for numeric arrays, including programs which do not close.
+pub fn validate_segments_json(input : String) -> String {
+  let mut total_angle = 0.0
+  let mut total_lift = 0.0
+  let mut totals_valid = false
+  let response = try {
+    if input.length() > Input_bytes_max ||
+      @utf8.encode(input).length() > Input_bytes_max {
+      raise RequestError(
+        InputTooLarge,
+        "segment input exceeds UTF-8 byte limit",
+      )
+    }
+    let value = @json.parse(input) catch {
+      _ => raise RequestError(InvalidJson, "invalid JSON")
+    }
+    guard value is Array(items) else {
+      raise FieldError("segments", "segments must be an array")
+    }
+    if items.length() > Segments_max {
+      raise FieldError("segments", "too many segments")
+    }
+    totals_valid = true
+    for i = 0; i < items.length(); i = i + 1 {
+      match items[i] {
+        Object(fields) => {
+          match fields.get("angle_deg") {
+            Some(Number(n, ..)) => total_angle = total_angle + n
+            _ => totals_valid = false
+          }
+          match fields.get("lift_mm") {
+            Some(Number(n, ..)) => total_lift = total_lift + n
+            _ => totals_valid = false
+          }
+        }
+        _ => totals_valid = false
+      }
+    }
+    let p = decode_program(value)
+    Json({
+      "ok": Json(true),
+      "schema_version": Json(Schema_version),
+      "segment_count": Json(p.segments.length()),
+    })
+  } catch {
+    FieldError(field, message) =>
+      @json.parse(field_error_json(InvalidRequest, message, Json(field))) catch {
+        _ => Json(null)
+      }
+    InputError(message) =>
+      @json.parse(error_json(InvalidRequest, message)) catch {
+        _ => Json(null)
+      }
+    RequestError(code, message) =>
+      @json.parse(error_json(code, message)) catch {
+        _ => Json(null)
+      }
+    _ =>
+      @json.parse(error_json(InternalError, "unexpected validation failure")) catch {
+        _ => Json(null)
+      }
+  }
+  match response {
+    Object(fields) =>
+      if totals_valid && finite(total_angle) && finite(total_lift) {
+        fields.set("total_angle_deg", Json(total_angle))
+        fields.set("total_lift_mm", Json(total_lift))
+      }
+    _ => ()
+  }
+  response.stringify()
 }
