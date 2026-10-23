@@ -10,6 +10,8 @@ pub(all) enum CrossingCheck {
 ///|
 /// Scalar-only analysis. Local feasibility excludes topology by definition.
 pub(all) struct Metrics {
+  pressure_sample_index : Int32
+  offset_factor_sample_index : Int32
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
@@ -27,6 +29,8 @@ pub(all) struct Metrics {
 /// Sampled acceptance requires local constraints AND a completed crossing check.
 pub(all) struct Analysis {
   points : Array[CamPoint]
+  pressure_sample_index : Int32
+  offset_factor_sample_index : Int32
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
@@ -37,6 +41,8 @@ pub(all) struct Analysis {
   jerk_jumps : Int32
   sampled_local_feasible : Bool
   crossings : CrossingCheck
+  crossing_witnesses : Array[CrossingWitness]
+  crossing_witnesses_truncated : Bool
   sampled_feasible : Bool
   nominal_resolution : Int32
 }
@@ -145,6 +151,8 @@ fn scan_mesh(
   let q0 = zero_height(g)
   let points : Array[CamPoint] = []
   let mut pressure = 0.0
+  let mut pressure_index = 0
+  let mut factor_index = 0
   let mut pa = 0.0
   let mut factor = 0.0
   let mut first_factor = true
@@ -155,7 +163,8 @@ fn scan_mesh(
   if !finite(jerk) {
     return Err("jerk overflow")
   }
-  for item in mesh.samples {
+  for index = 0; index < mesh.samples.length(); index = index + 1 {
+    let item = mesh.samples[index]
     let geom = match local_geometry(g, q0, item.motion) {
       Ok(v) => v
       Err(e) => return Err(e)
@@ -163,11 +172,13 @@ fn scan_mesh(
     if geom.pressure.abs() > pressure {
       pressure = geom.pressure.abs()
       pa = item.theta
+      pressure_index = index
     }
     if first_factor || geom.factor < factor {
       first_factor = false
       factor = geom.factor
       fa = item.theta
+      factor_index = index
     }
     let t = match scale_motion(item.motion, omega) {
       Ok(v) => v
@@ -186,6 +197,8 @@ fn scan_mesh(
   Ok({
     points,
     metrics: {
+      pressure_sample_index: pressure_index,
+      offset_factor_sample_index: factor_index,
       max_pressure: pressure,
       pressure_angle: pa,
       min_offset_factor: factor,
@@ -194,7 +207,8 @@ fn scan_mesh(
       max_acceleration: acceleration,
       max_jerk: jerk,
       jerk_jumps: mesh.jerk_jumps,
-      sampled_local_feasible: pressure <= pressure_limit && factor > 1.0e-6,
+      sampled_local_feasible: pressure <= pressure_limit &&
+      factor > Offset_factor_min,
       sample_count: mesh.samples.length(),
       nominal_resolution: mesh.nominal_resolution,
     },
@@ -213,17 +227,26 @@ pub fn sampled_acceptance(local_ok : Bool, crossings : CrossingCheck) -> Bool {
 ///|
 fn finish_scan(scan : Scan) -> Analysis {
   let m = scan.metrics
+  let witnesses : Array[CrossingWitness] = []
+  let mut truncated = false
   let crossings = match crossing_report(scan.points) {
-    Ok(r) =>
+    Ok(r) => {
+      for witness in r.witnesses {
+        witnesses.push(witness)
+      }
+      truncated = r.witnesses_truncated
       if r.uncertain_pairs > 0 {
         Indeterminate(r.crossings, r.uncertain_pairs)
       } else {
         Checked(r.crossings)
       }
+    }
     Err(e) => Failed(e)
   }
   {
     points: scan.points,
+    pressure_sample_index: m.pressure_sample_index,
+    offset_factor_sample_index: m.offset_factor_sample_index,
     max_pressure: m.max_pressure,
     pressure_angle: m.pressure_angle,
     min_offset_factor: m.min_offset_factor,
@@ -234,6 +257,8 @@ fn finish_scan(scan : Scan) -> Analysis {
     jerk_jumps: m.jerk_jumps,
     sampled_local_feasible: m.sampled_local_feasible,
     crossings,
+    crossing_witnesses: witnesses,
+    crossing_witnesses_truncated: truncated,
     sampled_feasible: sampled_acceptance(m.sampled_local_feasible, crossings),
     nominal_resolution: m.nominal_resolution,
   }

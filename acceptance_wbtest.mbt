@@ -109,7 +109,11 @@ test "G01-G12 fixed geometry acceptance matrix" {
     },
   ]
   let g : Geometry = { base_radius: 40.0, roller_radius: 4.0, offset: 0.0, }
-  let metrics = measure(example_program(Cycloidal), g, 72, 0.6, 1.0).unwrap()
+  let metrics = {
+    ..measure(example_program(Cycloidal), g, 72, 0.6, 1.0).unwrap(),
+    pressure_sample_index: 0,
+    offset_factor_sample_index: 0,
+  }
   for case in cases {
     let a = finish_scan({ metrics, points: polygon(case.coords), })
     if a.crossings.status() != case.status {
@@ -130,7 +134,10 @@ test "G01-G12 fixed geometry acceptance matrix" {
         "incomplete"
       },
     )
-    guard report(a, g, 1.0, []) is Object(fields) else { fail(case.id) }
+    guard report(a, g, 1.0, [], example_program(Cycloidal), 0.6)
+      is Object(fields) else {
+      fail(case.id)
+    }
     assert_eq(fields.get("state"), Some(Json(a.state())))
     guard fields.get("crossing_check") is Some(Object(check)) else {
       fail(case.id)

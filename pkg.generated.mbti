@@ -6,6 +6,8 @@ pub fn analyze(Program, Geometry, Int, Double, Double) -> Result[Analysis, Strin
 
 pub fn checked_export(Array[CamPoint], String) -> Result[String, String]
 
+pub fn compare_sampling(Program, Geometry, Array[Int], Double, Double) -> Result[SamplingComparison, String]
+
 pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
 
 pub fn contract_json() -> String
@@ -13,6 +15,8 @@ pub fn contract_json() -> String
 pub fn crossing_report(Array[CamPoint]) -> Result[CrossingReport, String]
 
 pub fn csv(Array[CamPoint]) -> String
+
+pub fn diagnose(Program, Analysis, Double) -> Result[Diagnostics, String]
 
 pub fn dxf_mm(Array[CamPoint]) -> String
 
@@ -25,6 +29,12 @@ pub fn example_program(Law) -> Program
 pub fn finite(Double) -> Bool
 
 pub fn input_limit_bytes() -> Int
+
+pub fn locate_angle(Program, Double) -> Result[Location, String]
+
+pub fn locate_edge(Program, Array[CamPoint], Int) -> Result[EdgeLocation, String]
+
+pub fn locate_sample(Program, Array[CamPoint], Int) -> Result[Location, String]
 
 pub fn measure(Program, Geometry, Int, Double, Double) -> Result[Metrics, String]
 
@@ -57,6 +67,8 @@ pub fn validate_geometry(Geometry) -> Result[Unit, String]
 // Types and methods
 pub(all) struct Analysis {
   points : Array[CamPoint]
+  pressure_sample_index : Int
+  offset_factor_sample_index : Int
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
@@ -67,6 +79,8 @@ pub(all) struct Analysis {
   jerk_jumps : Int
   sampled_local_feasible : Bool
   crossings : CrossingCheck
+  crossing_witnesses : Array[CrossingWitness]
+  crossing_witnesses_truncated : Bool
   sampled_feasible : Bool
   nominal_resolution : Int
 }
@@ -86,6 +100,15 @@ pub(all) struct CamPoint {
   offset_factor : Double
 }
 
+pub(all) struct ConstraintDiagnostic {
+  code : String
+  value : Double
+  limit : Double
+  margin : Double
+  passed : Bool
+  location : Location
+}
+
 pub(all) enum CrossingCheck {
   NotChecked
   Checked(Int)
@@ -98,6 +121,26 @@ pub(all) struct CrossingReport {
   crossings : Int
   pair_visits : Int
   uncertain_pairs : Int
+  witnesses : Array[CrossingWitness]
+  witnesses_truncated : Bool
+}
+
+pub(all) struct CrossingWitness {
+  kind : String
+  edge_a : Int
+  edge_b : Int
+}
+
+pub(all) struct Diagnostics {
+  pressure : ConstraintDiagnostic
+  offset_factor : ConstraintDiagnostic
+}
+
+pub(all) struct EdgeLocation {
+  edge_index : Int
+  segment_index : Int
+  start : Location
+  end : Location
 }
 
 pub(all) enum ErrorCode {
@@ -125,7 +168,19 @@ pub(all) enum Law {
   Polynomial4567
 }
 
+pub(all) struct Location {
+  sample_index : Int?
+  segment_index : Int
+  theta_rad : Double
+  segment_start_rad : Double
+  segment_end_rad : Double
+  law : String
+  periodic_endpoint : Bool
+}
+
 pub(all) struct Metrics {
+  pressure_sample_index : Int
+  offset_factor_sample_index : Int
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
@@ -150,6 +205,22 @@ pub struct Program {
   segments : Array[Segment]
   starts : Array[Double]
   heights : Array[Double]
+}
+
+pub(all) struct SamplingComparison {
+  levels : Array[SamplingLevel]
+  pressure_change : Double
+  offset_factor_change : Double
+  state_consistent : Bool
+}
+
+pub(all) struct SamplingLevel {
+  nominal_resolution : Int
+  sample_count : Int
+  pressure : ConstraintDiagnostic
+  offset_factor : ConstraintDiagnostic
+  crossings : CrossingCheck
+  state : String
 }
 
 pub(all) enum SearchError {

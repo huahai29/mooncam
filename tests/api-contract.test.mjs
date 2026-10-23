@@ -107,3 +107,75 @@ test('finite valid input with derivative overflow is a calculation failure',()=>
  assert.equal(r.error_code,'calculation_failed');assert.equal(r.field,null);
  assert.equal(error_exit_code(r.error_code),1);
 });
+
+test('diagnostics, point indices and segment boundaries describe the same sampled position',()=>{
+ for(const resolution of [36,73,720]) for(const base_radius_mm of [5,40]) {
+  const r=call({...base,resolution,base_radius_mm}).result;
+  for(const [index,p] of r.points.entries()) {
+   assert.equal(p.sample_index,index);
+   const segment=r.segments[p.segment_index];
+   if(index===r.points.length-1) {assert.equal(p.segment_index,0);assert.equal(p.theta_rad,2*Math.PI);}
+   else assert.ok(p.theta_rad>=segment.start_rad&&p.theta_rad<segment.end_rad);
+  }
+  for(const key of ['pressure','offset_factor']) {
+   const d=r.diagnostics[key],l=d.location,p=r.points[l.sample_index];
+   assert.equal(p.theta_rad,l.theta_rad);assert.equal(p.segment_index,l.segment_index);
+   assert.equal(l.segment_start_rad,r.segments[l.segment_index].start_rad);
+   assert.ok(Math.abs((key==='pressure'?Math.abs(p.pressure_deg):p.offset_factor)-d.value)<1e-12);
+   assert.equal(d.passed,key==='pressure'?d.value<=d.limit:d.value>d.limit);
+  }
+  assert.equal(r.diagnostics.pressure.passed,base_radius_mm===40);
+  assert.equal(r.diagnostics.reasons.includes('pressure_limit_exceeded'),base_radius_mm===5);
+ }
+});
+
+test('optional sampling comparison matches independent reports, respects limits and keeps cache on original mesh',()=>{
+ assert.equal(call(base).result.sampling_comparison,undefined);
+ assert.equal(call({...base,compare_sampling:'yes'}).field,'compare_sampling');
+ for(const resolution of [36,720,1001,4000]) {
+  const r=call({...base,resolution,compare_sampling:true,outputs:[]}).result,c=r.sampling_comparison;
+  assert.equal(c.levels.length,3);assert.ok(c.levels.some(l=>l.nominal_resolution===resolution));
+  for(const level of c.levels) {
+   assert.ok(level.nominal_resolution>=36&&level.nominal_resolution<=4000);
+   const independent=call({...base,resolution:level.nominal_resolution,outputs:[]}).result;
+   assert.deepEqual(level.pressure,independent.diagnostics.pressure);
+   assert.deepEqual(level.offset_factor,independent.diagnostics.offset_factor);
+   assert.deepEqual(level.crossing_check,independent.crossing_check);assert.equal(level.state,independent.state);
+  }
+  assert.equal(r.points,undefined);
+ }
+ const original=call({...base,compare_sampling:true,outputs:['csv']});
+ assert.equal(JSON.parse(export_profile('csv')).content,original.result.csv);
+ const rejected=call({...base,base_radius_mm:5,compare_sampling:true}).result;
+ assert.equal(rejected.sampling_comparison.state_consistent,true);
+ assert.equal(rejected.state,'rejected');
+});
+
+test('edge witnesses match numeric point coordinates and remain useful without points output',()=>{
+ const request={...base,base_radius_mm:1,roller_radius_mm:20,resolution:72};
+ const r=call(request).result;
+ assert.ok(r.crossing_check.count>0);assert.ok(r.crossing_evidence.witnesses.length>0);
+ for(const w of r.crossing_evidence.witnesses) for(const e of [w.edge_a,w.edge_b]) {
+  const a=r.points[e.edge_index],b=r.points[e.edge_index+1];
+  assert.equal(e.start.sample_index,a.sample_index);assert.equal(e.end.sample_index,b.sample_index);
+  assert.equal(e.segment_index,a.segment_index);
+  assert.deepEqual([e.start_x,e.start_y,e.end_x,e.end_y],[a.x,a.y,b.x,b.y]);
+  assert.equal(e.start.theta_rad,a.theta_rad);assert.equal(e.end.theta_rad,b.theta_rad);
+ }
+ const summary=call({...request,outputs:[]}).result;
+ assert.deepEqual(summary.crossing_evidence,r.crossing_evidence);assert.equal(summary.points,undefined);
+ const spec=JSON.parse(contract());
+ for(const key of Object.keys(r.diagnostics.pressure.location)) assert.ok(spec.position_contract.fields[key]);
+ for(const code of r.diagnostics.reasons) assert.ok(spec.diagnostic_contract.reason_codes.includes(code));
+ for(const w of r.crossing_evidence.witnesses) assert.ok(spec.diagnostic_contract.witness_kinds.includes(w.kind));
+});
+
+test('search compares the fixed final candidate with independent per-resolution analyses',()=>{
+ const request={...base,action:'search',resolution:180,search:{lower_mm:35,upper_mm:40,intervals:5},compare_sampling:true,outputs:[]};
+ const r=call(request);assert.equal(r.ok,true);
+ assert.equal(r.result.sampling.nominal_resolution,360);
+ for(const level of r.result.sampling_comparison.levels) {
+  const independent=call({...base,base_radius_mm:r.result.base_radius_mm,resolution:level.nominal_resolution,outputs:[]}).result;
+  assert.deepEqual(level.pressure,independent.diagnostics.pressure);
+ }
+});

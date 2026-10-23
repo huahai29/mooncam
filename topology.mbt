@@ -4,6 +4,28 @@ pub(all) struct CrossingReport {
   crossings : Int32
   pair_visits : Int32
   uncertain_pairs : Int32
+  witnesses : Array[CrossingWitness]
+  witnesses_truncated : Bool
+}
+
+///|
+/// Edge i joins input points[i] and points[i+1]. No invented intersection point.
+pub(all) struct CrossingWitness {
+  kind : String
+  edge_a : Int32
+  edge_b : Int32
+}
+
+///|
+fn retain_witness(
+  witnesses : Array[CrossingWitness],
+  kind : String,
+  edge_a : Int32,
+  edge_b : Int32,
+) -> Unit {
+  if witnesses.length() < Crossing_witnesses_max {
+    witnesses.push({ kind, edge_a, edge_b, })
+  }
 }
 
 ///|
@@ -124,6 +146,7 @@ pub fn crossing_report(
     }
   }
   let mut uncertain_pairs = 0
+  let witnesses : Array[CrossingWitness] = []
   // Adjacent edges share a vertex legitimately, but must not reverse and overlap.
   for i = 0; i < n; i = i + 1 {
     let a = points[(i + n - 1) % n]
@@ -138,6 +161,7 @@ pub fn crossing_report(
       if scale > 0.0 &&
         ux / scale * (vx / scale) + uy / scale * (vy / scale) < 0.0 {
         uncertain_pairs = uncertain_pairs + 1
+        retain_witness(witnesses, "adjacent_reversal", (i + n - 1) % n, i)
       }
     }
   }
@@ -181,13 +205,21 @@ pub fn crossing_report(
         }
         if t1 * t2 < 0 && t3 * t4 < 0 {
           count = count + 1
+          retain_witness(witnesses, "proper_crossing", i, j)
         } else {
           uncertain_pairs = uncertain_pairs + 1
+          retain_witness(witnesses, "uncertain_contact", i, j)
         }
       }
     }
   }
-  Ok({ crossings: count, pair_visits, uncertain_pairs, })
+  Ok({
+    crossings: count,
+    pair_visits,
+    uncertain_pairs,
+    witnesses,
+    witnesses_truncated: count + uncertain_pairs > witnesses.length(),
+  })
 }
 
 ///|

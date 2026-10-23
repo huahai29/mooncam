@@ -200,14 +200,116 @@ fn crossing_json(check : CrossingCheck) -> Json {
 }
 
 ///|
+fn location_json(location : Location) -> Json {
+  {
+    "sample_index": match location.sample_index {
+      Some(index) => Json(index)
+      None => Json(null)
+    },
+    "segment_index": Json(location.segment_index),
+    "theta_rad": Json(location.theta_rad),
+    "segment_start_rad": Json(location.segment_start_rad),
+    "segment_end_rad": Json(location.segment_end_rad),
+    "law": Json(location.law),
+    "periodic_endpoint": Json(location.periodic_endpoint),
+  }
+}
+
+///|
+fn constraint_json(d : ConstraintDiagnostic, pressure : Bool) -> Json {
+  let scale = if pressure { 180.0 / @math.PI } else { 1.0 }
+  {
+    "code": Json(d.code),
+    "value": Json(d.value * scale),
+    "limit": Json(d.limit * scale),
+    "margin": Json(d.margin * scale),
+    "passed": Json(d.passed),
+    "unit": Json(if pressure { "deg" } else { "dimensionless" }),
+    "comparison": Json(
+      if pressure {
+        "value <= limit"
+      } else {
+        "value > limit"
+      },
+    ),
+    "location": location_json(d.location),
+  }
+}
+
+///|
+fn reason_codes(a : Analysis, d : Diagnostics) -> Array[String] {
+  let reasons : Array[String] = []
+  if !d.pressure.passed {
+    reasons.push("pressure_limit_exceeded")
+  }
+  if !d.offset_factor.passed {
+    reasons.push("offset_factor_rejected")
+  }
+  match a.crossings {
+    Checked(n) => if n > 0 { reasons.push("profile_crossings") }
+    Indeterminate(n, _) => {
+      if n > 0 {
+        reasons.push("profile_crossings")
+      }
+      reasons.push("geometry_indeterminate")
+    }
+    Failed(_) => reasons.push("geometry_failed")
+    NotChecked => reasons.push("geometry_not_checked")
+  }
+  reasons
+}
+
+///|
+fn edge_json(p : Program, points : Array[CamPoint], index : Int32) -> Json {
+  let edge = locate_edge(p, points, index).unwrap()
+  {
+    "edge_index": Json(index),
+    "segment_index": Json(edge.segment_index),
+    "start": location_json(edge.start),
+    "end": location_json(edge.end),
+    "start_x": Json(points[index].x),
+    "start_y": Json(points[index].y),
+    "end_x": Json(points[index + 1].x),
+    "end_y": Json(points[index + 1].y),
+  }
+}
+
+///|
+fn comparison_json(comparison : SamplingComparison) -> Json {
+  {
+    "levels": Json(
+      comparison.levels.map(fn(level) {
+        {
+          "nominal_resolution": Json(level.nominal_resolution),
+          "sample_count": Json(level.sample_count),
+          "pressure": constraint_json(level.pressure, true),
+          "offset_factor": constraint_json(level.offset_factor, false),
+          "crossing_check": crossing_json(level.crossings),
+          "state": Json(level.state),
+        }
+      }),
+    ),
+    "last_pressure_change_deg": Json(
+      comparison.pressure_change * 180.0 / @math.PI,
+    ),
+    "last_offset_factor_change": Json(comparison.offset_factor_change),
+    "state_consistent": Json(comparison.state_consistent),
+    "scope": "Observed sampled changes only; no convergence certificate or continuous error bound. Indices belong to each level's own mesh.",
+  }
+}
+
+///|
 /// Summaries are always present; heavy outputs are generated only on request.
 fn report(
   a : Analysis,
   g : Geometry,
   omega : Double,
   outputs : Array[String],
+  p : Program,
+  pressure_limit : Double,
 ) -> Json {
   let state = a.state()
+  let diagnostics = diagnose(p, a, pressure_limit).unwrap()
   let fields : Map[String, Json] = {
     "schema_version": Json(Schema_version),
     "units": Json("mm"),
@@ -215,6 +317,35 @@ fn report(
     "sampled_local_feasible": Json(a.sampled_local_feasible),
     "sampled_feasible": Json(a.sampled_feasible),
     "crossing_check": crossing_json(a.crossings),
+    "diagnostics": {
+      "pressure": constraint_json(diagnostics.pressure, true),
+      "offset_factor": constraint_json(diagnostics.offset_factor, false),
+      "reasons": Json(reason_codes(a, diagnostics)),
+    },
+    "segments": Json(
+      p.segments.mapi(fn(i, _) {
+        let location = location_at(p, p.starts[i], None)
+        {
+          "segment_index": Json(i),
+          "start_rad": Json(location.segment_start_rad),
+          "end_rad": Json(location.segment_end_rad),
+          "law": Json(location.law),
+        }
+      }),
+    ),
+    "crossing_evidence": {
+      "witnesses": Json(
+        a.crossing_witnesses.map(fn(w) {
+          {
+            "kind": Json(w.kind),
+            "edge_a": edge_json(p, a.points, w.edge_a),
+            "edge_b": edge_json(p, a.points, w.edge_b),
+          }
+        }),
+      ),
+      "truncated": Json(a.crossing_witnesses_truncated),
+      "limit": Json(Crossing_witnesses_max),
+    },
     "base_radius_mm": Json(g.base_radius),
     "roller_radius_mm": Json(g.roller_radius),
     "offset_mm": Json(g.offset),
@@ -242,8 +373,12 @@ fn report(
     fields.set(
       "points",
       Json(
-        a.points.map(fn(c) {
+        a.points.mapi(fn(index, c) {
           {
+            "sample_index": Json(index),
+            "segment_index": Json(
+              location_at(p, c.theta, Some(index)).segment_index,
+            ),
             "theta_rad": Json(c.theta),
             "lift_mm": Json(c.motion.s),
             "velocity_mm_s": Json(c.motion.v * omega),
@@ -274,6 +409,38 @@ fn report(
 }
 
 ///|
+fn report_with_comparison(
+  p : Program,
+  a : Analysis,
+  g : Geometry,
+  omega : Double,
+  pressure : Double,
+  outputs : Array[String],
+  compare : Bool,
+) -> Json raise {
+  let result = report(a, g, omega, outputs, p, pressure)
+  if compare {
+    let comparison = match
+      compare_sampling_cached(
+        p,
+        g,
+        comparison_resolutions(a.nominal_resolution),
+        pressure,
+        omega,
+        Some(a),
+      ) {
+      Ok(c) => c
+      Err(e) => raise RequestError(CalculationFailed, e)
+    }
+    guard result is Object(fields) else {
+      raise RequestError(InternalError, "invalid report")
+    }
+    fields.set("sampling_comparison", comparison_json(comparison))
+  }
+  result
+}
+
+///|
 /// Schema v2: byte-bounded input, selected outputs, typed errors and check states.
 fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
   cache.clear()
@@ -291,6 +458,7 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
     let f = obj(value, [
       "action", "units", "segments", "base_radius_mm", "roller_radius_mm", "offset_mm",
       "rpm", "resolution", "pressure_limit_deg", "search", "outputs", "include_input",
+      "compare_sampling",
     ])
     let outputs = selected_outputs(f)
     let include_input = match f.get("include_input") {
@@ -298,6 +466,12 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
       Some(True) => true
       Some(False) => false
       _ => raise FieldError("include_input", "include_input must be boolean")
+    }
+    let compare = match f.get("compare_sampling") {
+      None | Some(False) => false
+      Some(True) => true
+      _ =>
+        raise FieldError("compare_sampling", "compare_sampling must be boolean")
     }
     if text(f, "units") != "mm" {
       raise FieldError("units", "JSON interface requires mm units")
@@ -361,7 +535,9 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
         {
           "ok": true,
           "schema_version": Json(Schema_version),
-          "result": report(a, g, omega, outputs),
+          "result": report_with_comparison(
+            p, a, g, omega, pressure, outputs, compare,
+          ),
         }
       }
       "search" => {
@@ -397,7 +573,15 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
           "tested": Json(found.tested),
           "grid_step_mm": Json(found.grid_step),
           "search_scope": "First sampled-accepted grid candidate; topology completed on the fine mesh; not a continuous optimum.",
-          "result": report(found.analysis, found.geometry, omega, outputs),
+          "result": report_with_comparison(
+            p,
+            found.analysis,
+            found.geometry,
+            omega,
+            pressure,
+            outputs,
+            compare,
+          ),
         }
       }
       _ => raise FieldError("action", "action must be analyze or search")

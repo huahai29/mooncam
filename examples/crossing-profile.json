@@ -1,0 +1,32 @@
+{
+  "action": "analyze",
+  "units": "mm",
+  "base_radius_mm": 1,
+  "roller_radius_mm": 20,
+  "offset_mm": 0,
+  "rpm": 60,
+  "resolution": 72,
+  "pressure_limit_deg": 30,
+  "segments": [
+    {
+      "angle_deg": 90,
+      "lift_mm": 20,
+      "law": "4567"
+    },
+    {
+      "angle_deg": 90,
+      "lift_mm": 0,
+      "law": "4567"
+    },
+    {
+      "angle_deg": 90,
+      "lift_mm": -20,
+      "law": "4567"
+    },
+    {
+      "angle_deg": 90,
+      "lift_mm": 0,
+      "law": "4567"
+    }
+  ]
+}

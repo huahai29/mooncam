@@ -92,6 +92,8 @@ test "wire reports preserve failed and unchecked topology states" {
       g,
       1.0,
       [],
+      p,
+      0.6,
     )
     guard value is Object(fields) else { fail("expected report") }
     assert_eq(fields.get("state"), Some(Json("incomplete")))

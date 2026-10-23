@@ -59,16 +59,7 @@ pub fn evaluate(p : Program, theta : Double) -> Result[Motion, String] {
   }
   let tau = 2.0 * @math.PI
   let t = theta - @math.floor(theta / tau) * tau
-  let mut lo = 0
-  let mut hi = p.segments.length()
-  while lo + 1 < hi {
-    let mid = (lo + hi) / 2
-    if p.starts[mid] <= t {
-      lo = mid
-    } else {
-      hi = mid
-    }
-  }
+  let lo = segment_at(p, t)
   let seg = p.segments[lo]
   segment_motion(
     seg,

@@ -5,6 +5,34 @@
     "indeterminate",
     "failed"
   ],
+  "diagnostic_contract": {
+    "fields": {
+      "compare_sampling": "可选布尔请求字段，默认 false；true 为最终机构尺寸执行三档完整采样检查。",
+      "comparison": "压力角允许等于上限；偏置因子必须严格大于阈值。",
+      "crossing_evidence": "最多保留指定数量的边对，数量达到上限后仍继续统计全部交叉与不确定对。",
+      "diagnostics": "局部约束的数值、阈值、余量、通过状态、位置及综合原因码。",
+      "last_offset_factor_change": "最后两档最小偏置因子的绝对差，不是误差界。",
+      "last_pressure_change_deg": "最后两档最大压力角的绝对差（度），不是误差界。",
+      "margin": "压力角为 limit-value；偏置因子为 value-limit；正数表示有余量，不是安全认证。",
+      "sampling_comparison": "每档拥有独立点号和边号；包含最差位置、局部余量、拓扑状态和综合状态。",
+      "state_consistent": "各档综合状态是否相同；即使全部 incomplete 也可为 true，不代表通过。",
+      "truncated": "是否存在未保留的证据；空证据不能单独证明检查完成。",
+      "witnesses": "含 kind、edge_a、edge_b；每条边附位置和端点坐标，不计算或声称精确交点。"
+    },
+    "reason_codes": [
+      "pressure_limit_exceeded",
+      "offset_factor_rejected",
+      "profile_crossings",
+      "geometry_indeterminate",
+      "geometry_failed",
+      "geometry_not_checked"
+    ],
+    "witness_kinds": [
+      "proper_crossing",
+      "uncertain_contact",
+      "adjacent_reversal"
+    ]
+  },
   "errors": [
     {
       "code": "invalid_json",
@@ -42,12 +70,15 @@
   "limits": {
     "base_radius_min": 0.000001,
     "closure_relative_tolerance": 1e-10,
+    "comparison_levels_max": 4,
     "coordinate_max": 1e+150,
     "crossing_pair_budget": 4000000,
+    "crossing_witnesses_max": 32,
     "geometry_length_max": 1000000,
     "input_bytes_max": 200000,
     "json_resolution_max": 4000,
     "library_resolution_max": 20000,
+    "offset_factor_min": 0.000001,
     "profile_points_max": 25000,
     "profile_points_min": 4,
     "resolution_min": 36,
@@ -56,6 +87,25 @@
     "search_resolution_max": 2000,
     "segment_angle_min": 0.000001,
     "segments_max": 128
+  },
+  "position_contract": {
+    "edge_definition": "edge i joins samples i and i+1; N+1 closed samples have N edges",
+    "fields": {
+      "edge_index": "边的零基下标，连接点 i 与 i+1。",
+      "end": "边终点的位置；段界终点可属于下一段。",
+      "law": "所属段的规律：cycloidal、345 或 4567。",
+      "periodic_endpoint": "是否为 2π 周期端点；运动值和点归首段，最后一条边仍归末段。",
+      "sample_index": "采样点的零基下标；纯角度查询为 null，不隐含最近采样点。",
+      "segment_end_rad": "所属程序段的结束角度（弧度）。",
+      "segment_index": "程序段的零基下标；段界归右侧段，网页展示段号时加一。",
+      "segment_start_rad": "所属程序段的起始角度（弧度）。",
+      "start": "边起点的位置，含该采样点下标。",
+      "theta_rad": "本圈角度（弧度），闭合点保留 2π。"
+    },
+    "index_base": 0,
+    "index_scope": "sample and edge indices belong to one sampling result; never compare across levels",
+    "periodic_endpoint_segment": 0,
+    "segment_intervals": "left_closed_right_open"
   },
   "result_states": [
     {

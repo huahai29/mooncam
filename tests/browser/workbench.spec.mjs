@@ -76,3 +76,56 @@ test('late duplicate response cannot overwrite a later calculation',async({page}
  await expect(page.locator('#metrics')).toContainText('5.00 mm');
  await expect(page.locator('#metrics')).toContainText('需调整');
 });
+
+
+test('diagnostic location matches slider, curve cursor and highlighted contact point',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#base').fill('5');await page.locator('#analyze').click();
+ await expect(page.locator('#diagnostics')).toContainText('压力角超过设定上限');
+ const button=page.locator('[data-locate="pressure"]');
+ const index=await button.getAttribute('data-sample-index');
+ await button.click();
+ await expect(page.locator('#phase')).toHaveValue(index);
+ await expect(page.locator('#contact-marker')).toHaveAttribute('data-sample-index',index);
+ await expect(page.locator('#chart-cursor')).toHaveAttribute('data-sample-index',index);
+ await expect(page.locator('#angle')).toHaveText('35.5°');
+ await expect(page.locator('#selection-layer polyline')).toHaveAttribute('data-segment-index','0');
+ await page.screenshot({path:'test-results/diagnostic-location.png',fullPage:true});
+ await page.locator('[data-locate="offset_factor"]').click();
+ await expect(page.locator('#trace')).toHaveValue('offset_factor');
+ expect(errors).toEqual([]);
+});
+
+test('sampling comparison remains inside mobile viewport and does not reuse another mesh indices',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await page.goto('/');
+ await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#compare-sampling').check();await page.locator('#analyze').click();
+ await expect(page.locator('#comparison tbody tr')).toHaveCount(3);
+ await expect(page.locator('#comparison')).toContainText('720 / 721');
+ await expect(page.locator('#comparison')).toContainText('2880 / 2881');
+ await expect(page.locator('#comparison')).toContainText('不能直接定位到当前图');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/sampling-comparison-mobile.png',fullPage:true});
+ await page.locator('#compare-sampling').uncheck();await page.locator('#analyze').click();
+ await expect(page.locator('#comparison-panel')).toBeHidden();
+});
+
+test('actual crossing evidence highlights both identified edges and clears after recomputation',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#base').fill('1');await page.locator('#roller').fill('20');await page.locator('#resolution').fill('72');
+ await page.locator('#analyze').click();
+ await expect(page.locator('#evidence')).toContainText('确定交叉');
+ await page.locator('[data-witness="0"]').click();
+ await expect(page.locator('.witness-edge')).toHaveCount(2);
+ await expect(page.locator('.witness-edge').nth(0)).toHaveAttribute('data-edge-index','37');
+ await expect(page.locator('.witness-edge').nth(1)).toHaveAttribute('data-edge-index','44');
+ await expect(page.locator('#phase')).toHaveValue('37');
+ await page.screenshot({path:'test-results/crossing-evidence.png',fullPage:true});
+ await page.locator('#base').fill('40');await page.locator('#roller').fill('4');await page.locator('#analyze').click();
+ await expect(page.locator('#metrics')).toContainText('满足约束');
+ await expect(page.locator('.witness-edge')).toHaveCount(0);
+ await expect(page.locator('[data-witness]')).toHaveCount(0);
+ expect(errors).toEqual([]);
+});
