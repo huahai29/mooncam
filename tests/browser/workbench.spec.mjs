@@ -232,3 +232,12 @@ test('runtime Worker failure cancels an already selected sampling comparison',as
  await expect(page.locator('#compatibility-notice')).toBeVisible();expect(errors).toEqual([]);
  await page.locator('.settings').screenshot({path:'test-results/compatibility-mode.png'});
 });
+
+test('displayed provenance comes from the actual loaded engine',async({page})=>{
+ await page.goto('/');
+ const engine=await import('../../web/engine.js');
+ const meta=JSON.parse(engine.contract());
+ await expect(page.locator('#engine-version')).toContainText(`MoonCam ${meta.generator.version}`);
+ await expect(page.locator('#engine-version')).toContainText(`schema ${meta.schema_version}`);
+ await expect(page.locator('#engine-version')).toHaveAttribute('title',meta.generator.source_digest);
+});

@@ -28,6 +28,8 @@ pub fn example_program(Law) -> Program
 
 pub fn finite(Double) -> Bool
 
+pub fn generator_json() -> Json
+
 pub fn input_limit_bytes() -> Int
 
 pub fn locate_angle(Program, Double) -> Result[Location, String]

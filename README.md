@@ -155,12 +155,18 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 
 | 验证 | 已通过的范围 |
 | --- | --- |
-| MoonBit 单元与性质测试 | 52 组，JS、Wasm、Wasm-GC、Native 四后端分别执行 |
-| 接口、CLI 与导出 | 21 组集成测试 |
-| 浏览器操作 | 12 组，覆盖桌面、手机、兼容模式、表格、定位、比较与完整导出流程 |
+| MoonBit 单元与性质测试 | 54 组，JS、Wasm、Wasm-GC、Native 四后端分别执行 |
+| 接口、CLI 与导出 | 23 组集成测试 |
+| 浏览器操作 | 13 组，覆盖桌面、手机、兼容模式、表格、定位、比较与完整导出流程 |
 | 独立数值对照 | 18 组参数、432 个接触点 |
 
 GitHub Actions 还检查格式、公共接口快照和 DXF 独立读取，并保存性能观测。当前状态见 [Actions](https://github.com/huahai29/mooncam/actions/workflows/ci.yml)，具体方法与适用范围见[验证记录](docs/验证记录.md)。
+
+## 引擎版本与性能护栏
+
+网页页脚显示实际计算引擎的包版本、schema 版本和源码指纹；JSON 报告与 CLI 保存的报告保留完整 generator 信息。指纹标识计算源码，不等于 Git 提交；线上 main 分支可能含尚未进入 Mooncakes 0.3.0 归档的更新，复算时应同时核对版本与指纹。
+
+CI 在四后端检查高分辨率交叉候选访问量、128 段标量路径不保留坐标及固定网格搜索结果，另以 npm run performance:check 检查摘要体积和宽松耗时上限。方法、阈值和局限见[版本追溯与性能护栏](docs/版本追溯与性能护栏.md)。
 
 ## 适用边界
 

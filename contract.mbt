@@ -163,6 +163,7 @@ pub fn result_exit_code(state : String) -> Int32 {
 pub fn contract_json() -> String {
   let value : Json = {
     "schema_version": Json(Schema_version),
+    "generator": generator_json(),
     "limits": {
       "resolution_min": Json(Resolution_min),
       "library_resolution_max": Json(Library_resolution_max),

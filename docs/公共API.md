@@ -102,6 +102,7 @@ pub fn error_exit_code(String) -> Int
 pub fn evaluate(Program, Double) -> Result[Motion, String]
 pub fn example_program(Law) -> Program
 pub fn finite(Double) -> Bool
+pub fn generator_json() -> Json
 pub fn input_limit_bytes() -> Int
 pub fn locate_angle(Program, Double) -> Result[Location, String]
 pub fn locate_edge(Program, Array[CamPoint], Int) -> Result[EdgeLocation, String]

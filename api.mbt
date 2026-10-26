@@ -182,6 +182,7 @@ fn field_error_json(code : ErrorCode, message : String, field : Json) -> String 
   let err : Json = {
     "ok": false,
     "schema_version": Json(Schema_version),
+    "generator": generator_json(),
     "error_code": Json(code.code()),
     "field": field,
     "error": message,
@@ -345,6 +346,7 @@ fn report(
   }
   let fields : Map[String, Json] = {
     "schema_version": Json(Schema_version),
+    "generator": generator_json(),
     "units": Json("mm"),
     "state": Json(state),
     "sampled_local_feasible": Json(a.sampled_local_feasible),
@@ -560,6 +562,7 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
         {
           "ok": true,
           "schema_version": Json(Schema_version),
+          "generator": generator_json(),
           "result": report_with_comparison(
             p, a, g, omega, pressure, outputs, compare,
           ),
@@ -595,6 +598,7 @@ fn run_json_cached(input : String, cache : Array[Array[CamPoint]]) -> String {
         {
           "ok": true,
           "schema_version": Json(Schema_version),
+          "generator": generator_json(),
           "tested": Json(found.tested),
           "grid_step_mm": Json(found.grid_step),
           "search_scope": "First sampled-accepted grid candidate; topology completed on the fine mesh; not a continuous optimum.",
@@ -673,6 +677,7 @@ pub fn Session::export_profile(self : Session, format : String) -> String {
   let result : Json = {
     "ok": true,
     "schema_version": Json(Schema_version),
+    "generator": generator_json(),
     "format": Json(format),
     "content": Json(content),
   }
@@ -723,6 +728,7 @@ pub fn validate_segments_json(input : String) -> String {
     Json({
       "ok": Json(true),
       "schema_version": Json(Schema_version),
+      "generator": generator_json(),
       "segment_count": Json(p.segments.length()),
     })
   } catch {

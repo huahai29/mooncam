@@ -18,6 +18,9 @@ function receive(data, generation) {
   if (generation !== epoch) return;
   if (data.ready) {
     const limits = data.contract.limits;
+    const generator = data.contract.generator;
+    $('engine-version').textContent = generator ? `${generator.name} ${generator.version} · schema ${data.contract.schema_version} · 引擎 ${generator.source_digest.slice(7,19)}` : '引擎版本未知，请刷新页面';
+    $('engine-version').title = generator?.source_digest || '';
     $('resolution').min = limits.resolution_min; $('resolution').max = limits.json_resolution_max;
     $('intervals').max = limits.search_intervals_max;
     $('base').min = limits.base_radius_min; $('base').max = limits.geometry_length_max;

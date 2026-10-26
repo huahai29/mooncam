@@ -24,6 +24,7 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: 格式与严格检查
         run: |
+          node scripts/version.mjs
           moon version --all
           moon fmt --check
           moon check --deny-warn --target all
@@ -46,6 +47,7 @@ jobs:
           python tests/dxf_interop.py
           npm run demo
           npm run benchmark
+          npm run performance:check
       - name: 浏览器测试
         run: |
           npm ci

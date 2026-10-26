@@ -67,6 +67,11 @@
       "exit_code": 1
     }
   ],
+  "generator": {
+    "name": "MoonCam",
+    "source_digest": "sha256:a2efa91c5304cf8992c67673fbcde3611baada835a899789a3ee0fb0df6edbed",
+    "version": "0.3.0"
+  },
   "limits": {
     "base_radius_min": 0.000001,
     "closure_relative_tolerance": 1e-10,
