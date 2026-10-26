@@ -104,7 +104,7 @@ node bin/mooncam.mjs examples/size-search.json --out artifacts/search
 
 ## 在 MoonBit 中调用
 
-完整签名与错误约定见 [公共 API](docs/公共API.md)。根目录是可复用库，`examples/library/` 是完整调用示例。模块名为 `huahai29/mooncam`，本次发布版本为 `0.3.0`：
+完整签名与错误约定见 [公共 API](docs/公共API.md)。根目录是可复用库，`examples/library/` 是完整调用示例。模块名为 `huahai29/mooncam`，已发布版本为 [0.3.0](https://mooncakes.io/docs/huahai29/mooncam@0.3.0)：
 
 ```sh
 moon add huahai29/mooncam@0.3.0
