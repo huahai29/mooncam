@@ -35,6 +35,12 @@ moon run examples/library --target wasm-gc
 
 以上只需要 MoonBit，不需要 Node.js。`examples/library` 直接调用类型化库，输出默认案例的最大压力角、最小局部偏置因子和点数。
 
+### 在线使用
+
+[打开 MoonCam 在线工作台](https://huahai29.github.io/mooncam/web/)：无需安装，选择算例即可计算、定位问题和下载结果。参数在浏览器本地处理，核心引擎由 MoonBit 编译生成；运行时无需远程计算服务。使用说明见工作台内的“第一次使用”。
+
+在线页面在 main 分支检查通过后由 GitHub Pages 自动更新，包含教程、算例和本次检查构建的计算引擎。
+
 ### 打开网页工作台
 
 使用网页或 CLI 时，还需安装 Node.js 22 或更新版本。在仓库根目录运行：
