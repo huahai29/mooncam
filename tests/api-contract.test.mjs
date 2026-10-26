@@ -59,7 +59,9 @@ test('MoonBit session exports the previous result without replay and clears on f
 
 test('CLI supports bounded stdin, version, overrides and independent batch reports',()=>{
  const command=(args,input)=>spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),...args],{encoding:'utf8',input});
- assert.match(command(['--version']).stdout,/^0\.2\.0/);
+ const version=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;
+ assert.equal(command(['--version']).stdout.trim(),version);
+ assert.equal(readFileSync(new URL('../moon.mod',import.meta.url),'utf8').match(/^version\s*=\s*"([^"]+)"/m)[1],version);
  assert.equal(command(['-'],JSON.stringify(base)).status,0);
  const changed=command(['-','--base-radius','5'],JSON.stringify(base));assert.equal(changed.status,2);
  assert.equal(command(['-','--rpm','oops'],JSON.stringify(base)).status,1);

@@ -104,7 +104,22 @@ node bin/mooncam.mjs examples/size-search.json --out artifacts/search
 
 ## 在 MoonBit 中调用
 
-完整签名与错误约定见 [公共 API](docs/公共API.md)。根目录是可复用库，`examples/library/` 是完整调用示例。目前尚未发布到 Mooncakes，不能直接使用 `moon add huahai29/mooncam`；可以克隆运行或作为本地模块依赖使用。
+完整签名与错误约定见 [公共 API](docs/公共API.md)。根目录是可复用库，`examples/library/` 是完整调用示例。模块名为 `huahai29/mooncam`，本次发布版本为 `0.3.0`：
+
+```sh
+moon add huahai29/mooncam@0.3.0
+```
+
+在消费方 moon.pkg 中导入：
+
+```moonbit
+import {
+  "huahai29/mooncam" @cam,
+  "moonbitlang/core/math",
+}
+```
+
+Mooncakes 发布包包含核心库、核心测试、纯 MoonBit 示例与文档；CLI、网页宿主及其构建工具保留在 GitHub 仓库，使用它们仍按上文克隆构建。发布与独立安装验证步骤见[发布流程](docs/发布流程.md)，本版变化见[0.3.0 版本说明](docs/releases/0.3.0.md)。
 
 ```moonbit
 let p = @cam.example_program(@cam.Polynomial4567)
@@ -130,7 +145,7 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 - [设计取舍](docs/设计取舍.md)：采样、搜索、容差、输出和兼容策略。
 - [判定验收](docs/判定验收.md)：固定几何案例、预期状态和验收命令。
 
-截至 2026-10-24 的验证记录：
+截至 2026-10-26 的验证记录：
 
 | 验证 | 已通过的范围 |
 | --- | --- |
@@ -153,8 +168,10 @@ GitHub Actions 还检查格式、公共接口快照和 DXF 独立读取，并保
 
 [后续改进清单](docs/后续改进清单.md) 已区分已完成交付、原十项的部分进展与尚未实现的研究目标，避免把已交付功能继续列为待办。
 
-## 0.2 版本接口变化
+## 0.3.0 与接口兼容
 
-当前包版本为 0.2.0，JSON schema 为 2。默认只返回点数据和摘要；通过 `outputs` 选择 points / csv / svg / dxf，空数组仅返回摘要，`include_input` 控制输入回显。CLI 自动按需请求格式，报告只保存摘要与文件引用。响应中的名义分辨率改为 `sampling.nominal_resolution`（请求仍使用 `resolution`），实际点数另行报告；JSON 根切角字段改名为 `min_offset_factor_angle_rad`。旧版本调用方需按 [输入输出说明](docs/输入输出说明.md) 迁移。
+当前包版本为 0.3.0，JSON schema 仍为 2。相比 0.2 开发阶段，新增统一位置、诊断余量、采样比较、边对证据和分段校验；手工构造公共结构的调用方需补齐新增字段，详见版本说明。
+
+0.2 开发阶段已引入的 JSON 行为继续保留：默认只返回点数据和摘要；通过 `outputs` 选择 points / csv / svg / dxf，空数组仅返回摘要，`include_input` 控制输入回显。CLI 自动按需请求格式，报告只保存摘要与文件引用。响应中的名义分辨率改为 `sampling.nominal_resolution`（请求仍使用 `resolution`），实际点数另行报告；JSON 根切角字段改名为 `min_offset_factor_angle_rad`。旧版本调用方需按 [输入输出说明](docs/输入输出说明.md) 迁移。
 
 历史优化核查见 [优化核查记录](docs/优化核查记录.md)；当前接口与状态以 [接口契约](docs/接口契约.md) 为准。

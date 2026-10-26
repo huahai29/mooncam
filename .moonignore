@@ -1,0 +1,19 @@
+# .moonignore defines the complete publish exclusion policy.
+/_build/
+/.git/
+/.mooncakes/
+/node_modules/
+/artifacts/
+/test-results/
+**/credentials.json
+# Publish the library, core tests, pure example and documentation.
+# Node/browser hosts and development tooling remain in the GitHub checkout.
+/bin/
+/bridge/
+/web/
+/scripts/
+/tests/
+/package.json
+/package-lock.json
+/playwright.config.mjs
+/requirements-test.txt
