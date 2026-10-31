@@ -1,0 +1,88 @@
+{
+  "application": "FreeCAD",
+  "version": [
+    "1",
+    "1",
+    "4",
+    "20260928 (Git shallow)",
+    "Unknown",
+    "2026/09/28 13:46:34",
+    "(HEAD detached at 4fd3bf320)",
+    "4fd3bf320d9566a27e60069fc8387448aaa3a094"
+  ],
+  "importer": "Import.readDXF (bundled modern C++ importer)",
+  "generator": {
+    "name": "MoonCam",
+    "version": "0.4.0",
+    "source_digest": "sha256:17da239e19c102dd22dd852c16145851125175ba6f1a78f004576aafceb715d7"
+  },
+  "cases": {
+    "circle": {
+      "source_sha256": "147104a070fe3133dac3ac2017b03544626cf7b2b8331207c4179540e45eb360",
+      "object_type": "Part::Feature",
+      "object_name": "Polyline",
+      "vertices": 720,
+      "edges": 720,
+      "wires": 1,
+      "closed": true,
+      "shape_valid": true,
+      "bbox_mm": {
+        "xmin": -40.0,
+        "xmax": 40.0,
+        "ymin": -40.0,
+        "ymax": 40.0
+      },
+      "width_mm": 80.0,
+      "height_mm": 80.0,
+      "perimeter_mm": 251.3266148014036,
+      "enclosed_area_mm2": 5026.484447063384,
+      "bidirectional_vertex_distance_max_mm": 0.0,
+      "mooncam_state": "accepted_sampled"
+    },
+    "workshop": {
+      "source_sha256": "bbbd738a9fd9b7d48ff383cde237610f7c3742b622777b6eadcf5ee0110ca106",
+      "object_type": "Part::Feature",
+      "object_name": "Polyline",
+      "vertices": 720,
+      "edges": 720,
+      "wires": 1,
+      "closed": true,
+      "shape_valid": true,
+      "bbox_mm": {
+        "xmin": -40.0,
+        "xmax": 60.0,
+        "ymin": -60.0,
+        "ymax": 40.0
+      },
+      "width_mm": 100.0,
+      "height_mm": 100.0,
+      "perimeter_mm": 321.5687212004135,
+      "enclosed_area_mm2": 8078.579893941594,
+      "bidirectional_vertex_distance_max_mm": 0.0,
+      "mooncam_state": "accepted_sampled"
+    },
+    "offset": {
+      "source_sha256": "da64a1449f17fbfdadb84f497d4f6a7626fe75f96d06a87c02d3e41cd7237658",
+      "object_type": "Part::Feature",
+      "object_name": "Polyline",
+      "vertices": 720,
+      "edges": 720,
+      "wires": 1,
+      "closed": true,
+      "shape_valid": true,
+      "bbox_mm": {
+        "xmin": -41.23568353469076,
+        "xmax": 59.593978545543486,
+        "ymin": -59.639146035666386,
+        "ymax": 39.99988638809923
+      },
+      "width_mm": 100.82966208023424,
+      "height_mm": 99.63903242376561,
+      "perimeter_mm": 320.2037589059211,
+      "enclosed_area_mm2": 8011.694138476799,
+      "bidirectional_vertex_distance_max_mm": 0.0,
+      "mooncam_state": "rejected"
+    }
+  },
+  "status": "passed"
+}

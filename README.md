@@ -100,6 +100,7 @@ Mooncakes 0.4.0 提供核心库；网页和 CLI 从仓库运行。在线版跟�
 - [接口契约](docs/接口契约.md)：状态、上限与错误码。
 - [架构说明](docs/架构说明.md)与[设计取舍](docs/设计取舍.md)：代码组织和算法选择。
 - [验证记录](docs/验证记录.md)与[固定验收用例](docs/判定验收.md)：测试方法、独立数值对照和检查命令。
+- [CAD 导入验收](docs/CAD导入验收.md)：FreeCAD 原生导入的尺寸、闭合与坐标对照。
 - [版本追溯与性能护栏](docs/版本追溯与性能护栏.md)、[更新记录](CHANGELOG.md)与[后续计划](docs/后续改进清单.md)。
 
 当前测试包括四后端各 54 组核心测试、23 组集成测试和 13 组浏览器测试，另有独立数值对照与 DXF 读取验证。对应提交的运行结果见 [GitHub Actions](https://github.com/huahai29/mooncam/actions)。参与开发或反馈问题请看[贡献说明](CONTRIBUTING.md)。

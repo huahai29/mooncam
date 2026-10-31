@@ -1,0 +1,51 @@
+{
+  "generator": {
+    "name": "MoonCam",
+    "version": "0.4.0",
+    "source_digest": "sha256:17da239e19c102dd22dd852c16145851125175ba6f1a78f004576aafceb715d7"
+  },
+  "cases": {
+    "circle": {
+      "vertices": 720,
+      "closed": true,
+      "units": "mm",
+      "bbox": {
+        "xmin": -40,
+        "xmax": 40,
+        "ymin": -40,
+        "ymax": 40
+      },
+      "perimeter_mm": 251.3266148014036,
+      "area_mm2": 5026.484447063356,
+      "state": "accepted_sampled"
+    },
+    "workshop": {
+      "vertices": 720,
+      "closed": true,
+      "units": "mm",
+      "bbox": {
+        "xmin": -40,
+        "xmax": 60,
+        "ymin": -60,
+        "ymax": 40
+      },
+      "perimeter_mm": 321.5687212004136,
+      "area_mm2": 8078.579893941582,
+      "state": "accepted_sampled"
+    },
+    "offset": {
+      "vertices": 720,
+      "closed": true,
+      "units": "mm",
+      "bbox": {
+        "xmin": -41.23568353469076,
+        "xmax": 59.593978545543486,
+        "ymin": -59.639146035666386,
+        "ymax": 39.99988638809923
+      },
+      "perimeter_mm": 320.2037589059211,
+      "area_mm2": 8011.694138476785,
+      "state": "rejected"
+    }
+  }
+}
