@@ -26,7 +26,7 @@
 
 已发布 0.4.0 的 DXF 在实体中引用 MOONCAM 图层，但没有在 TABLES 中声明。FreeCAD 输出 First reference to missing Layer 'MOONCAM' 后自动补建，三组几何检查仍通过。
 
-本轮 main 修复在 MoonBit 导出器中显式声明 MOONCAM 图层及 CONTINUOUS 线型，保留已有单位、坐标、点数和闭合标志。修复后三组重新生成并导入，图层警告不再出现，几何结果不变。集成测试检查图层与线型记录存在。该修复尚未发布为新的 Mooncakes 版本，不能将修复后的输出归属于既有 0.4.0 发布归档。
+本轮 main 修复在 MoonBit 导出器中显式声明 MOONCAM 图层及 CONTINUOUS 线型，保留已有单位、坐标、点数和闭合标志。修复后三组重新生成并导入，图层警告不再出现，几何结果不变。集成测试检查图层与线型记录存在。该修复已随 Mooncakes 0.4.1 发布；下方指纹保留当时实际验收的原始信息，不能将修复后的输出归属于既有 0.4.0 发布归档。
 
 原始引擎指纹为 3826c7d0408ff8b23dca5a8f78ddabcb1caa5de91dd9217b5deee1a39b6ce12a；修复后为 17da239e19c102dd22dd852c16145851125175ba6f1a78f004576aafceb715d7。输入、DXF 摘要和原生测量完整数值见 [证据目录](cad/freecad-1.1.4)。
 
