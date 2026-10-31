@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import {readFileSync,writeFileSync,mkdirSync,statSync} from 'node:fs';
-import {resolve,join,basename,extname} from 'node:path';
+import {readSnapshot,publishDirectory} from './delivery.mjs';
+import {readFileSync} from 'node:fs';
+import {resolve,basename,extname} from 'node:path';
 const args=process.argv.slice(2);
 const help=`Usage: node bin/mooncam.mjs INPUT.json [MORE.json ...] [--out DIRECTORY]
 Use - for UTF-8 JSON on stdin. Multiple inputs run sequentially; stdout is JSONL.
@@ -30,7 +31,7 @@ try{
     const chunks=[];let size=0;
     for await(const chunk of process.stdin){size+=chunk.length;if(size>limit)throw new Error(`Input exceeds ${limit} UTF-8 bytes.`);chunks.push(chunk);}
     bytes=Buffer.concat(chunks);
-   }else{if(statSync(file).size>limit)throw new Error(`Input exceeds ${limit} UTF-8 bytes.`);bytes=readFileSync(file);}
+   }else{bytes=readSnapshot(file,limit);}
    if(bytes.length>limit)throw new Error(`Input exceeds ${limit} UTF-8 bytes.`);
    const original=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
    const effective={...original,...overrides};
@@ -40,11 +41,11 @@ try{
     const {csv,svg,dxf,points,...summary}=response.result;
     if(output){
      const name=file==='-'?'stdin':basename(file,extname(file));
-     const out=resolve(output,...(inputs.length>1?[`${index+1}-${name}`]:[]));mkdirSync(out,{recursive:true});
+     const out=resolve(output,...(inputs.length>1?[`${index+1}-${name}`]:[]));
      const files={csv:'profile.csv',svg:'profile.svg',dxf:'profile.dxf',input:'input.json'};
      const compact={...response,result:summary,files};delete compact.input;
      const contents={'profile.csv':csv,'profile.svg':svg,'profile.dxf':dxf,'input.json':JSON.stringify(effective,null,2)+'\n','report.json':JSON.stringify(compact,null,2)+'\n'};
-     for(const[name,content]of Object.entries(contents))writeFileSync(join(out,name),content,'utf8');
+     publishDirectory(out,contents);
      console.error(`Saved report, effective input and profiles to ${out}`);
     }
     console.log(JSON.stringify({...summary,input:file,tested:response.tested,grid_step_mm:response.grid_step_mm},null,inputs.length>1?0:2));

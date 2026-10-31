@@ -20,9 +20,9 @@ test('compiled engine provenance matches module and all result paths',()=>{
 test('CLI persisted report preserves compiled engine provenance',()=>{
  const dir=mkdtempSync(join(tmpdir(),'mooncam-provenance-'));
  try{
-  const result=spawnSync(process.execPath,['bin/mooncam.mjs','examples/workshop.json','--out',dir],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
+  const result=spawnSync(process.execPath,['bin/mooncam.mjs','examples/workshop.json','--out',join(dir,'out')],{cwd:new URL('../',import.meta.url),encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);
-  const saved=JSON.parse(readFileSync(join(dir,'report.json'),'utf8'));
+  const saved=JSON.parse(readFileSync(join(dir,'out','report.json'),'utf8'));
   assert.deepEqual(saved.generator,meta);assert.deepEqual(saved.result.generator,meta);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

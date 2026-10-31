@@ -1,0 +1,113 @@
+{
+  "scope": "Fixed-case actual error against analytic/stationary reference; not a general certified bound. Exact rational Sturm counts isolate all interior rise critical points; decimal evaluation is a numerical approximation, not directed rounding.",
+  "references": {
+    "workshop": {
+      "maximum_deg": "27.60949108003256273950396812403627383206",
+      "rise_position_deg": 41.93359062856964,
+      "critical_roots_per_rise": 1
+    },
+    "analytic345": {
+      "maximum_deg": "69.49424716419262911368580796729743236368",
+      "rise_position_deg": 25.714285714285715,
+      "critical_roots_per_rise": 1
+    }
+  },
+  "rows": [
+    {
+      "case": "workshop",
+      "n": 720,
+      "maximum": 27.609335250922467,
+      "position": 42,
+      "elapsed_ms": 0.9250399999999999,
+      "reference_deg": 27.609491080032562,
+      "error_deg": 0.00015582911009559552,
+      "delta_to_next_deg": 0.0,
+      "position_error_deg": 0.06640937143036041,
+      "observed_order": null
+    },
+    {
+      "case": "workshop",
+      "n": 1440,
+      "maximum": 27.609335250922467,
+      "position": 42,
+      "elapsed_ms": 9.57762,
+      "reference_deg": 27.609491080032562,
+      "error_deg": 0.00015582911009559552,
+      "delta_to_next_deg": 3.444101778882214e-05,
+      "position_error_deg": 0.06640937143036041,
+      "observed_order": null
+    },
+    {
+      "case": "workshop",
+      "n": 2880,
+      "maximum": 27.609369691940255,
+      "position": 228.125,
+      "elapsed_ms": 1.9349999999999965,
+      "reference_deg": 27.609491080032562,
+      "error_deg": 0.00012138809230677339,
+      "delta_to_next_deg": 0.00012084787438837452,
+      "position_error_deg": 0.0585906285696467,
+      "observed_order": 0.36033785944469876
+    },
+    {
+      "case": "workshop",
+      "n": 5760,
+      "maximum": 27.609490539814644,
+      "position": 41.93749999999999,
+      "elapsed_ms": 2.802600000000001,
+      "reference_deg": 27.609491080032562,
+      "error_deg": 5.402179183988665e-07,
+      "delta_to_next_deg": null,
+      "position_error_deg": 0.003909371430353303,
+      "observed_order": 7.811869697347704
+    },
+    {
+      "case": "analytic345",
+      "n": 720,
+      "maximum": 69.49272083682882,
+      "position": 25.5,
+      "elapsed_ms": 0.6467199999999991,
+      "reference_deg": 69.49424716419263,
+      "error_deg": 0.0015263273638055352,
+      "delta_to_next_deg": 0.0014843162968958268,
+      "position_error_deg": 0.2142857142857153,
+      "observed_order": null
+    },
+    {
+      "case": "analytic345",
+      "n": 1440,
+      "maximum": 69.49420515312572,
+      "position": 244.25000000000003,
+      "elapsed_ms": 1.1770199999999988,
+      "reference_deg": 69.49424716419263,
+      "error_deg": 4.201106690970846e-05,
+      "delta_to_next_deg": 0.0,
+      "position_error_deg": 0.03571428571424917,
+      "observed_order": 5.183151186779647
+    },
+    {
+      "case": "analytic345",
+      "n": 2880,
+      "maximum": 69.49420515312572,
+      "position": 244.25000000000003,
+      "elapsed_ms": 1.8160199999999975,
+      "reference_deg": 69.49424716419263,
+      "error_deg": 4.201106690970846e-05,
+      "delta_to_next_deg": 1.832592275263778e-05,
+      "position_error_deg": 0.03571428571424917,
+      "observed_order": null
+    },
+    {
+      "case": "analytic345",
+      "n": 5760,
+      "maximum": 69.49422347904847,
+      "position": 25.6875,
+      "elapsed_ms": 2.7907200000000048,
+      "reference_deg": 69.49424716419263,
+      "error_deg": 2.368514415707068e-05,
+      "delta_to_next_deg": null,
+      "position_error_deg": 0.0267857142857153,
+      "observed_order": 0.8267869721044927
+    }
+  ]
+}

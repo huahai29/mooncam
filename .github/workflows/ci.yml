@@ -68,6 +68,7 @@ jobs:
           npm run test:property
           python -m pip install -r requirements-test.txt
           python tests/oracle.py
+          python tests/sampling_experiment.py
           python tests/oracle_highprec.py
           python tests/dxf_interop.py
           npm run demo

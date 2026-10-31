@@ -14,6 +14,8 @@
 
 在线版无需安装，计算在浏览器本地完成，输入参数不发送到服务器。
 
+[采样误差实验](docs/采样误差实验.md)：常规算例连续极值参考约 27.60949108°，720 分辨率低估约 0.00015583°，5760 时约 0.00000054°；另有闭式极值算例对照。上述是固定算例误差，不是任意输入的误差保证。
+
 ![MoonCam 工作台](docs/images/workbench.png)
 
 ## 先试一次：把压力角降到限制以内
@@ -78,7 +80,7 @@ npm run build
 npm run serve
 ```
 
-打开 http://127.0.0.1:4173/ ，保持服务终端运行。命令行生成文件：
+打开 http://127.0.0.1:4173/ ，保持服务终端运行。命令行生成文件（输出目录必须不存在）：
 
 ```sh
 node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop
@@ -137,6 +139,7 @@ Mooncakes 提供核心库，网页和 CLI 从仓库运行。在线版跟随 main
 - 配置与结果：[输入输出](docs/输入输出说明.md)、[诊断与采样比较](docs/位置诊断与采样比较.md)、[状态与错误码](docs/接口契约.md)。
 - 实现：[架构说明](docs/架构说明.md)、[设计取舍](docs/设计取舍.md)。
 - 验证：[测试与独立对照](docs/验证记录.md)、[CAD 导入](docs/CAD导入验收.md)、[跨平台一致性](docs/跨平台一致性.md)。
+- CLI：[安全交付与失败恢复](docs/CLI安全交付.md)。
 - 开发：[更新记录](CHANGELOG.md)、[贡献说明](CONTRIBUTING.md)。
 
 CI 覆盖核心测试、README 示例数值、覆盖率门槛、浏览器操作、独立数值对照与 Windows/Linux 一致性检查。[查看运行结果](https://github.com/huahai29/mooncam/actions)

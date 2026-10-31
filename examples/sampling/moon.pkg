@@ -1,0 +1,11 @@
+import {
+  "huahai29/mooncam" @cam,
+  "moonbitlang/core/math",
+}
+
+pkgtype(kind: "executable")
+
+options(
+  supported_targets: "js",
+  link: { "js": { "exports": [ "sample_case" ], "format": "esm" } },
+)

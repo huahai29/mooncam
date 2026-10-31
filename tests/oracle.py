@@ -307,7 +307,7 @@ def reference_band(
     factor: int,
     h_coarse: float,
 ) -> dict:
-    """Upper/lower bounds of the true supremum plus the Lipschitz constant."""
+    """Observed bands using a sampled derivative estimate; NOT certified supremum bounds."""
     steps = resolution * factor
     grid_max = 0.0
     lipschitz = 0.0
@@ -325,6 +325,7 @@ def reference_band(
         "upper_deg": math.degrees(grid_max + lipschitz * h_fine / 2.0),
         "lower_deg": math.degrees(grid_max - lipschitz * h_fine / 2.0 - lipschitz * h_coarse / 2.0),
         "lipschitz_deg_per_rad": math.degrees(lipschitz),
+        "certified": False,
         "grid_points": steps,
     }
 
@@ -728,11 +729,12 @@ def verify_sandwich(label: str, case: dict, result: dict, h_coarse: float, facto
         "resolution": case["resolution"],
         "reported_deg": reported,
         "reference_grid_max_deg": band["grid_max_deg"],
-        "upper_bound_deg": band["upper_deg"],
-        "lower_bound_deg": band["lower_deg"],
+        "observed_upper_band_deg": band["upper_deg"],
+        "observed_lower_band_deg": band["lower_deg"],
         "sampling_deficit_deg": band["grid_max_deg"] - reported,
         "lipschitz_deg_per_rad": band["lipschitz_deg_per_rad"],
         "reference_grid_points": band["grid_points"],
+        "certified": False,
     }
 
 

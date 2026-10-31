@@ -6,7 +6,7 @@
   "description": "Node host and browser shell for the MoonBit MoonCam library",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test:integration": "node --test tests/integration.test.mjs tests/export.test.mjs tests/api-contract.test.mjs tests/provenance.test.mjs tests/result-bundle.test.mjs",
+    "test:integration": "node --test tests/integration.test.mjs tests/export.test.mjs tests/api-contract.test.mjs tests/provenance.test.mjs tests/result-bundle.test.mjs tests/delivery.test.mjs",
     "test:property": "node tests/property.test.mjs",
     "test:consistency": "node tests/consistency.mjs",
     "test:consistency:compare": "node tests/consistency.check.mjs artifacts/consistency",
@@ -24,7 +24,8 @@
     "toolchain:check": "node scripts/check-toolchain.mjs",
     "test:consistency:checker": "node --test tests/consistency-check.test.mjs",
     "test:readme": "node tests/readme-numbers.mjs",
-    "test:coverage": "node --test tests/coverage-check.test.mjs && node scripts/coverage.mjs"
+    "test:coverage": "node --test tests/coverage-check.test.mjs && node scripts/coverage.mjs",
+    "test:sampling": "python tests/sampling_experiment.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"
