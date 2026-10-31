@@ -2,6 +2,10 @@
 
 ## 未发布（main）
 
+- 跨平台 CI 必须收到 Windows 和 Linux 清单，拒绝平台缺失或重复身份；每份清单要求 CLI 成功和输出齐全，双失败不再算通过。
+- 增加 9 组比较器回归测试，恢复双平台 `performance:check` 门禁，保留独立的基准观测。
+
+
 - 实际 FreeCAD 导入发现 DXF 引用未声明图层，现由 MoonBit 显式生成 MOONCAM 图层与 CONTINUOUS 线型表；坐标和闭合约定不变。
 - 增加三个原生 CAD 导入算例、可复算脚本与几何测量记录；完整图形界面截图尚未完成，不声称商业 CAD 全面兼容。
 
@@ -21,7 +25,7 @@
 ### 跨平台一致性
 
 - 新增 `tests/consistency.mjs` 生成规范化清单（LF、键排序、15 位有效数字），对 JSON、CSV、DXF、SVG 与 CLI 落盘文件分别取摘要，并保留原始摘要区分逐字节与数值等价。
-- 新增 `tests/consistency.check.mjs` 汇总比对清单，摘要不一致时回落到 1e-12 相对容差的数值差异报告。
+- 新增 `tests/consistency.check.mjs` 汇总比对清单，规范化摘要不一致仍判失败，并以 1e-12 数值容差补充摘要指标的差异报告。
 - CI 改为 Ubuntu + Windows 双平台矩阵，新增一致性比对作业，Pages 部署需其通过；新增 [跨平台一致性](docs/跨平台一致性.md)。
 
 

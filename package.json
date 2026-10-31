@@ -21,7 +21,8 @@
     "docs:check": "node scripts/contract-docs.mjs --check",
     "performance:check": "node tests/performance-guard.mjs",
     "version:check": "node scripts/version.mjs",
-    "toolchain:check": "node scripts/check-toolchain.mjs"
+    "toolchain:check": "node scripts/check-toolchain.mjs",
+    "test:consistency:checker": "node --test tests/consistency-check.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"

@@ -62,6 +62,7 @@ jobs:
           npm run build
           npm run docs:check
           npm run test:integration
+          npm run test:consistency:checker
           npm run test:property
           python -m pip install -r requirements-test.txt
           python tests/oracle.py
@@ -69,6 +70,7 @@ jobs:
           python tests/dxf_interop.py
           npm run demo
           npm run benchmark
+          npm run performance:check
       - name: 跨平台一致性清单
         shell: bash
         run: node tests/consistency.mjs
@@ -109,7 +111,7 @@ jobs:
           mkdir -p artifacts/consistency
           find downloaded -name 'manifest-*.json' -print -exec cp {} artifacts/consistency/ \;
           ls -l artifacts/consistency
-          node tests/consistency.check.mjs artifacts/consistency
+          node tests/consistency.check.mjs artifacts/consistency --require-platforms=win32,linux
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
