@@ -6,7 +6,7 @@
   "description": "Node host and browser shell for the MoonBit MoonCam library",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test:integration": "node --test tests/integration.test.mjs tests/export.test.mjs tests/api-contract.test.mjs tests/provenance.test.mjs",
+    "test:integration": "node --test tests/integration.test.mjs tests/export.test.mjs tests/api-contract.test.mjs tests/provenance.test.mjs tests/result-bundle.test.mjs",
     "test:property": "node tests/property.test.mjs",
     "test:consistency": "node tests/consistency.mjs",
     "test:consistency:compare": "node tests/consistency.check.mjs artifacts/consistency",

@@ -1,18 +1,49 @@
+import {executeTask} from './engine-task.mjs';
+import {resultBundle} from './result-bundle.mjs';
 import {segmentEditor} from './segments.mjs';
 import {renderDiagnostics} from './diagnostics.mjs';
 const $ = id => document.getElementById(id);
 let worker, timer, latest, latestInput, ready = false;
 let epoch = 0, sequence = 0, pending, revision = 0, degraded = false;
-let selectedEvidence;
+let selectedEvidence, candidate;
+let running=false;
 let validationPending;
 const editor = segmentEditor((input, callback) => {
   if (!ready) return;
   const id = ++sequence;
   validationPending = {id,callback};
   worker.postMessage({id,kind:'validate',input});
-}, () => {revision++; if(latest)setStatus('参数已修改，请重新计算。');});
+}, () => {edited('参数已修改，请重新计算。');});
 const buttons = [$('analyze'), $('search')];
-function busy(value) { for (const b of buttons) b.disabled = value; }
+function busy(value) { running=value; for (const b of buttons) b.disabled = value; updateCandidate(); }
+function edited(message) { revision++; updateCandidate(); if(latest)setStatus(message); }
+function updateCandidate() {
+  const valid=candidate&&candidate.revision===revision;
+  $('apply-candidate').disabled=!ready||running||!valid;
+  if(candidate&&!valid)$('candidate-note').textContent='参数已修改，请重新搜索后再应用候选。';
+}
+function compareResults(before,after) {
+  const wrapper=document.createElement('div');wrapper.className='table-scroll';
+  const table=document.createElement('table');
+  const rows=[['项目','调整前','当前复核'],['基圆半径 / mm',before.base_radius_mm,after.base_radius_mm],['最大绝对压力角 / °',before.max_pressure_deg.toFixed(6),after.max_pressure_deg.toFixed(6)],['压力角余量 / °',before.diagnostics.pressure.margin.toFixed(6),after.diagnostics.pressure.margin.toFixed(6)],['名义分辨率',before.sampling.nominal_resolution,after.sampling.nominal_resolution],['综合采样检查',before.state==='accepted_sampled'?'通过':before.state==='rejected'?'拒绝':'未完成',after.state==='accepted_sampled'?'通过':after.state==='rejected'?'拒绝':'未完成']];
+  for(const [index,row] of rows.entries()){
+    const tr=document.createElement('tr');for(const value of row){const td=document.createElement(index?'td':'th');td.textContent=String(value);tr.append(td);}table.append(tr);
+  }
+  wrapper.append(table);$('candidate-comparison').replaceChildren(wrapper);
+}
+function showCandidate(task) {
+  const r=latest.result;
+  if(task.configuration.action==='search') {
+    candidate={radius:r.base_radius_mm,revision:task.revision,before:task.before};
+    $('candidate-panel').hidden=false;$('apply-candidate').hidden=false;
+    $('candidate-note').textContent=`搜索候选为 ${r.base_radius_mm} mm，尚未修改左侧参数。应用后按左侧分辨率重新分析。`+(task.before?'表中各次采样分辨率分别列出。':'先计算当前方案，可记录调整前后的对照。');
+  } else if(task.appliedRadius!==undefined) {
+    $('candidate-panel').hidden=false;$('apply-candidate').hidden=true;
+    $('candidate-note').textContent=`已将基圆改为 ${task.appliedRadius} mm 并重新计算，当前报告是本次分析的结果。`;
+  }
+  if(task.before)compareResults(task.before,r);
+  updateCandidate();
+}
 function setStatus(message, error = false) { $('status').textContent = message; $('status').className = error ? 'bad' : 'good'; }
 function receive(data, generation) {
   if (generation !== epoch) return;
@@ -38,8 +69,13 @@ function receive(data, generation) {
   clearTimeout(timer); busy(false);
   for (const b of document.querySelectorAll('[data-export]')) b.disabled = !latest;
   if (data.error || !data.response?.ok) { if(task.kind !== 'export') editor.check(); setStatus(data.error || `${data.response.field ? data.response.field + '：' : ''}${data.response.error}`, true); return; }
+  if (task.kind === 'bundle') {
+    try { download('mooncam-result.zip',resultBundle(task.snapshot,data.response.files),'application/zip');setStatus('已打包保存上次成功计算的输入、报告与轮廓。'); }
+    catch(error) { setStatus(`打包失败：${error.message}`,true); }
+    return;
+  }
   if (task.kind === 'export') { download(`mooncam.${task.format}`, data.response.content, task.format === 'svg' ? 'image/svg+xml' : 'text/plain'); return; }
-  latest = data.response; render();
+  latest = data.response; latestInput=task.configuration; render(); showCandidate(task);
   setStatus(latest.result.sampled_feasible ? '采样局部约束通过，轮廓交叉检查完成且未发现交叉。' : '采样约束不满足、发现轮廓交叉或检查无法确定，请查看各项状态。', !latest.result.sampled_feasible);
   if (latest.tested) $('status').append(document.createTextNode(` 已检查 ${latest.tested} 个网格位置，步长 ${latest.grid_step_mm.toFixed(3)} mm；结果不代表全局最小尺寸。`));
   if (revision !== task.revision) setStatus('参数在计算期间发生变化；图表和下载对应提交时的参数，请重新计算。', true);
@@ -51,7 +87,7 @@ async function fallback(generation) {
     degraded = true;
     worker = {postMessage(task) { queueMicrotask(() => {
       if (generation !== epoch) return;
-      try { receive({id: task.id, response: JSON.parse(task.kind === 'validate' ? engine.validate_segments(task.input) : task.kind === 'export' ? engine.export_profile(task.format) : engine.run(task.input))}, generation); }
+      try { receive({id: task.id, response: executeTask(engine,task)}, generation); }
       catch (error) { receive({id: task.id, error: error.message}, generation); }
     }); }, terminate() {}};
     receive({ready: true, contract: JSON.parse(engine.contract())}, generation);
@@ -65,7 +101,7 @@ function startWorker() {
     worker.onmessage = ({data}) => receive(data, generation);
     worker.onerror = () => {
       if (generation !== epoch) return;
-      clearTimeout(timer); worker.terminate(); latest = undefined;
+      clearTimeout(timer); worker.terminate(); latest = undefined; candidate=undefined; updateCandidate();
       for (const b of document.querySelectorAll('[data-export]')) b.disabled = true;
       pending = undefined; fallback(++epoch);
     };
@@ -76,28 +112,34 @@ function dispatch(task) {
   pending = {...task, id, revision}; busy(true);
   for (const b of document.querySelectorAll('[data-export]')) b.disabled = true;
   if (!degraded) timer = setTimeout(() => {
-    worker.terminate(); latest = undefined; startWorker();
+    worker.terminate(); latest = undefined; candidate=undefined; updateCandidate(); startWorker();
     setStatus('计算超过 20 秒，已停止并重建引擎。请降低采样数或搜索区间数后重试。', true);
   }, 20000);
-  worker.postMessage({...task, id});
+  worker.postMessage({id,kind:task.kind,input:task.input,format:task.format});
 }
 function configuration(action) {
   const segments = editor.values();
   return {action, units:'mm', compare_sampling:!degraded && $('compare-sampling').checked, base_radius_mm:Number($('base').value), roller_radius_mm:Number($('roller').value), offset_mm:Number($('offset').value), rpm:Number($('rpm').value), pressure_limit_deg:Number($('limit').value), resolution:Number($('resolution').value), segments,
     ...(action === 'search' ? {search:{lower_mm:Number($('lower').value),upper_mm:Number($('upper').value),intervals:Number($('intervals').value)}} : {})};
 }
-function calculate(action) {
+function calculate(action, context={}) {
   if (!ready) return;
   try {
-    latestInput=configuration(action);
-    const input = JSON.stringify({...latestInput,outputs:['points'],include_input:false});
-    latest = undefined; selectedEvidence = undefined;
+    const config=configuration(action);
+    let before=context.before;
+    if(action==='search'&&latest&&latestInput?.action==='analyze') {
+      const comparable=value=>JSON.stringify(Object.fromEntries(Object.entries(value).filter(([key])=>!['action','search','compare_sampling','resolution'].includes(key))));
+      if(comparable(config)===comparable(latestInput))before=latest.result;
+    }
+    const input = JSON.stringify({...config,outputs:['points'],include_input:false});
+    latest = undefined; selectedEvidence = undefined; candidate=undefined;
+    $('candidate-panel').hidden=true;$('candidate-comparison').replaceChildren();
     for (const id of ['metrics','profile','chart','diagnostics','evidence','comparison']) $(id).replaceChildren();
     $('comparison-panel').hidden = true;
     $('sampling').textContent = ''; $('range').textContent = ''; $('angle').value = '0.0°';
     for(const b of document.querySelectorAll('[data-export]')) b.disabled=true;
     busy(true); setStatus('正在计算…');
-    dispatch({kind: 'calculate', input});
+    dispatch({kind:'calculate',input,configuration:config,before,...context});
   } catch (error) {busy(false); setStatus(`输入格式错误：${error.message}`, true);}
 }
 function metric(title, value, status='') {
@@ -197,21 +239,28 @@ function selectEvidence(witness) {
   selectedEvidence = witness; phase();
 }
 function download(name,content,type='text/plain') {
-  const url=URL.createObjectURL(new Blob([content],{type})); const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const url=URL.createObjectURL(content instanceof Blob?content:new Blob([content],{type})); const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 for (const b of document.querySelectorAll('[data-export]')) b.onclick=()=>{
  if(!latest||!latestInput)return;
  const ext=b.dataset.export;
+ if(ext==='bundle'){dispatch({kind:'bundle',snapshot:structuredClone({response:latest,request:latestInput})});return;}
  if(ext==='json'){download('mooncam.json',JSON.stringify({...latest,input:latestInput},null,2));return;}
  if(latest.result[ext]){download(`mooncam.${ext}`,latest.result[ext],ext==='svg'?'image/svg+xml':'text/plain');return;}
  dispatch({kind:'export',format:ext});
 };
 $('save-input').onclick=()=>{try{download('mooncam-input.json',JSON.stringify((latest&&latestInput)?latestInput:configuration('analyze'),null,2));}catch(e){setStatus(e.message,true);}};
+$('apply-candidate').onclick=()=>{
+ if(!candidate||candidate.revision!==revision||running||!ready)return;
+ const {radius,before}=candidate;
+ $('base').value=String(radius);revision++;
+ calculate('analyze',{before,appliedRadius:radius});
+};
 $('analyze').onclick=()=>calculate('analyze');$('search').onclick=()=>calculate('search');$('phase').oninput=()=>{selectedEvidence=undefined;phase();};$('trace').onchange=chart;
 let presetSequence = 0;
 async function preset() {
   const token = ++presetSequence;
-  revision++;
+  edited('正在加载算例，请重新计算。');
   try {
     const response=await fetch(`../examples/${$('preset').value}.json`); if(!response.ok)throw new Error('算例加载失败'); const p=await response.json(); if (token !== presetSequence) return;
     for(const [id,key] of Object.entries({base:'base_radius_mm',roller:'roller_radius_mm',offset:'offset_mm',rpm:'rpm',limit:'pressure_limit_deg',resolution:'resolution'}))$(id).value=p[key];
@@ -221,5 +270,5 @@ async function preset() {
   }catch(e){setStatus(e.message,true);}
 }
 $('preset').onchange=preset;
-document.querySelector('.settings').addEventListener('input',()=>{revision++; if(latest)setStatus('参数已修改；当前图表和下载内容仍对应上次成功计算，请重新计算。');});
+document.querySelector('.settings').addEventListener('input',()=>{edited('参数已修改；当前图表和下载内容仍对应上次成功计算，请重新计算。');});
 busy(true); await preset(); startWorker();

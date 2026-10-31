@@ -8,3 +8,5 @@
 @media(min-width:1001px){.workspace{grid-template-columns:470px minmax(0,1fr)}}#segment-table{min-width:400px}#segment-table input{min-width:60px}#segment-table select{min-width:90px}
 
 #segment-table button{white-space:nowrap}#segment-table th:last-child{min-width:52px}
+
+#candidate-comparison table{min-width:440px}#candidate-panel button{margin-top:4px}#candidate-note{overflow-wrap:anywhere}

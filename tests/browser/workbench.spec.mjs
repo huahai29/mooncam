@@ -1,3 +1,5 @@
+import {readZip} from '../zip-reader.mjs';
+import {readFile} from 'node:fs/promises';
 import {test,expect} from '@playwright/test';
 test('Chinese workbench computes, reports failures, searches and exports',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -177,7 +179,10 @@ test('walkthrough failure, location, candidate search, sampling comparison and e
  await page.locator('[data-locate="pressure"]').click();await expect(page.locator('#angle')).toHaveText('35.5°');
  await page.locator('#search').click();await expect(page.locator('#metrics')).toContainText('36.00 mm');
  await expect(page.locator('#base')).toHaveValue('5');
- await page.locator('#base').fill('36');await page.locator('#compare-sampling').check();await page.locator('#analyze').click();
+ await page.locator('#compare-sampling').check();
+ await expect(page.locator('#apply-candidate')).toBeDisabled();
+ await page.locator('#search').click();await expect(page.locator('#apply-candidate')).toBeEnabled();
+ await page.locator('#apply-candidate').click();await expect(page.locator('#base')).toHaveValue('36');
  await expect(page.locator('#comparison tbody tr')).toHaveCount(3);await expect(page.locator('#metrics')).toContainText('满足约束');
  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="dxf"]').click()]);expect(download.suggestedFilename()).toBe('mooncam.dxf');
  await page.screenshot({path:'test-results/walkthrough-result.png',fullPage:true});
@@ -240,4 +245,71 @@ test('displayed provenance comes from the actual loaded engine',async({page})=>{
  await expect(page.locator('#engine-version')).toContainText(`MoonCam ${meta.generator.version}`);
  await expect(page.locator('#engine-version')).toContainText(`schema ${meta.schema_version}`);
  await expect(page.locator('#engine-version')).toHaveAttribute('title',meta.generator.source_digest);
+});
+
+
+test('candidate apply rechecks the chosen radius and compares actual before and after reports',async({page})=>{
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#base').fill('5');await page.locator('#analyze').click();
+ await expect(page.locator('#metrics')).toContainText('59.02°');
+ await page.locator('#search').click();await expect(page.locator('#apply-candidate')).toBeEnabled();
+ await expect(page.locator('#candidate-comparison')).toContainText('59.023577');
+ await page.locator('#apply-candidate').click();
+ await expect(page.locator('#base')).toHaveValue('36');
+ await expect(page.locator('#candidate-note')).toContainText('已将基圆改为 36 mm 并重新计算');
+ await expect(page.locator('#candidate-comparison')).toContainText('29.516044');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="json"]').click()]);
+ const report=JSON.parse(await readFile(await download.path(),'utf8'));
+ expect(report.input.action).toBe('analyze');expect(report.input.base_radius_mm).toBe(36);
+ expect(report.result.sampling.nominal_resolution).toBe(720);
+ await page.locator('#candidate-panel').screenshot({path:'test-results/candidate-apply.png'});
+});
+
+test('edited parameters invalidate a candidate including edits while search is in flight',async({page})=>{
+ await page.addInitScript(()=>{
+  const Original=window.Worker;
+  window.Worker=class extends Original {
+   constructor(...args){super(...args);super.addEventListener('message',event=>{
+    event.stopImmediatePropagation();setTimeout(()=>this.deliver?.({data:event.data}),event.data.response?.tested?350:0);
+   });}
+   set onmessage(fn){this.deliver=fn;}
+  };
+ });
+ await page.goto('/');await expect(page.locator('#search')).toBeEnabled();
+ await page.locator('#search').click();await page.locator('#roller').fill('5');
+ await expect(page.locator('#candidate-panel')).toBeVisible();
+ await expect(page.locator('#apply-candidate')).toBeDisabled();
+ await expect(page.locator('#candidate-note')).toContainText('参数已修改');
+ await page.locator('#search').click();await expect(page.locator('#apply-candidate')).toBeEnabled();
+ await page.locator('#limit').fill('29');await expect(page.locator('#apply-candidate')).toBeDisabled();
+});
+
+test('ZIP keeps the last calculated inputs, exports and version despite unsaved edits',async({page})=>{
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await expect(page.locator('[data-export="bundle"]')).toBeDisabled();
+ await page.locator('#base').fill('5');await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('需调整');
+ await page.locator('#base').fill('99');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="bundle"]').click()]);
+ expect(download.suggestedFilename()).toBe('mooncam-result.zip');
+ const files=readZip(await readFile(await download.path()));
+ expect(JSON.parse(files['input.json']).base_radius_mm).toBe(5);
+ expect(JSON.parse(files['report.json']).result.state).toBe('rejected');
+ expect(files['README.md']).toContain('源码指纹');
+ expect(JSON.parse(files['manifest.json']).generator.source_digest).toBe(await page.locator('#engine-version').getAttribute('title'));
+ await page.locator('#save-input').scrollIntoViewIfNeeded();
+ await page.screenshot({path:'test-results/result-bundle-desktop.png',fullPage:true});
+});
+
+test('no Worker still supports candidate apply and complete ZIP export on mobile',async({page})=>{
+ await page.addInitScript(()=>{window.Worker=undefined;});await page.setViewportSize({width:390,height:844});
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#base').fill('5');await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('需调整');
+ await page.locator('#search').click();await expect(page.locator('#apply-candidate')).toBeEnabled();
+ await page.locator('#apply-candidate').click();await expect(page.locator('#base')).toHaveValue('36');
+ await expect(page.locator('#candidate-note')).toContainText('重新计算');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="bundle"]').click()]);
+ const files=readZip(await readFile(await download.path()));
+ expect(JSON.parse(files['input.json']).base_radius_mm).toBe(36);expect(files['profile.dxf']).toContain('LWPOLYLINE');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/result-bundle-mobile.png',fullPage:true});
 });
