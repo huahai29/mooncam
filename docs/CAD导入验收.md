@@ -6,7 +6,7 @@
 
 由 MoonCam 的 MoonBit 引擎生成 DXF；使用实际安装的 FreeCADCmd，通过 Import.readDXF 将文件导入原生 CAD 文档，而非用 ezdxf 读取替代。逐项查询 CAD 内部的边、顶点、线框、有效性、包围盒和长度，并保存 FCStd 工程。另在 FreeCAD 图形界面打开了圆形导入工程，切换到 Part 工作台并查看俯视轮廓。
 
-三组完整的图形界面截图尚未完成：桌面控制接口反复报告用户输入及窗口最小化，已停止继续抢占窗口。下表是实际 FreeCAD 原生导入与几何查询的结果，不是以截图推测的结果；不声称完成三组人工界面验收。
+三组图形界面截图已补齐：在 FreeCAD 中通过文件打开功能直接导入下方证据目录中的 DXF，选择 Individual Part shapes，以俯视图显示并选中 Polyline。截图用于核对实际显示；下表的尺寸、闭合性与有效性来自原生几何查询，不是从图片估算。
 
 ## 结果
 
@@ -29,6 +29,30 @@
 本轮 main 修复在 MoonBit 导出器中显式声明 MOONCAM 图层及 CONTINUOUS 线型，保留已有单位、坐标、点数和闭合标志。修复后三组重新生成并导入，图层警告不再出现，几何结果不变。集成测试检查图层与线型记录存在。该修复已随 Mooncakes 0.4.1 发布；下方指纹保留当时实际验收的原始信息，不能将修复后的输出归属于既有 0.4.0 发布归档。
 
 原始引擎指纹为 3826c7d0408ff8b23dca5a8f78ddabcb1caa5de91dd9217b5deee1a39b6ce12a；修复后为 17da239e19c102dd22dd852c16145851125175ba6f1a78f004576aafceb715d7。输入、DXF 摘要和原生测量完整数值见 [证据目录](cad/freecad-1.1.4)。
+
+## 图形界面截图
+
+以下为 FreeCAD 1.1.4 的原始窗口截图，未裁剪或修改。绿色表示当前选中的轮廓；左侧可见 `MOONCAM` 图层与 `Polyline`，右上角 `TOP` 表示俯视。三个输入文件均名为 `profile.dxf`，因此文档标签相同；按下列算例顺序打开，具体文件与截图摘要见[截图清单](cad/freecad-1.1.4/screenshots/manifest.json)。
+
+### 零升程圆形
+
+基圆半径 40 mm，原生测量外接尺寸 80 × 80 mm。[DXF](cad/freecad-1.1.4/circle/profile.dxf) · [输入](cad/freecad-1.1.4/circle/input.json)
+
+![圆形 DXF 在 FreeCAD 中的俯视图](cad/freecad-1.1.4/screenshots/circle.jpg)
+
+### 常规升程轮廓
+
+20 mm 升程、40 mm 基圆，原生测量外接尺寸 100 × 100 mm。[DXF](cad/freecad-1.1.4/workshop/profile.dxf) · [输入](cad/freecad-1.1.4/workshop/input.json)
+
+![常规升程 DXF 在 FreeCAD 中的俯视图](cad/freecad-1.1.4/screenshots/workshop.jpg)
+
+### 正偏置轮廓
+
+偏置 +10 mm，原生测量外接尺寸约 100.829662 × 99.639032 mm。本例能导入，但 MoonCam 的机构采样检查仍为拒绝。[DXF](cad/freecad-1.1.4/offset/profile.dxf) · [输入](cad/freecad-1.1.4/offset/input.json)
+
+![正偏置 DXF 在 FreeCAD 中的俯视图](cad/freecad-1.1.4/screenshots/offset.jpg)
+
+截图使用与修复后几何验收相同的存档 DXF，SHA-256 已逐项核对；其引擎版本与源码指纹沿用上方历史记录，不改写为当前发布版本。
 
 ## 如何复算
 

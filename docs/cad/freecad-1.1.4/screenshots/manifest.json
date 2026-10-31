@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-31",
+  "application": "FreeCAD 1.1.4",
+  "method": "Direct GUI open of archived fixed DXF; Individual Part shapes; Top view; selected Polyline shown in green. Original JPEG window captures, no image edits.",
+  "generator": {
+    "name": "MoonCam",
+    "version": "0.4.0",
+    "source_digest": "sha256:17da239e19c102dd22dd852c16145851125175ba6f1a78f004576aafceb715d7"
+  },
+  "cases": {
+    "circle": {
+      "screenshot": "circle.jpg",
+      "screenshot_sha256": "d58659787290a3111bf1f4fb9566a84e3ab2a47b51f718b28d68a2d0839a1a2f",
+      "width": 1280,
+      "height": 672,
+      "dxf": "../circle/profile.dxf",
+      "dxf_sha256": "147104a070fe3133dac3ac2017b03544626cf7b2b8331207c4179540e45eb360",
+      "mooncam_state": "accepted_sampled"
+    },
+    "workshop": {
+      "screenshot": "workshop.jpg",
+      "screenshot_sha256": "aac3b5c920613f1ca5b92f1c0808465e84bdbf9ab7d1d86d7c396c9c79a35010",
+      "width": 1280,
+      "height": 672,
+      "dxf": "../workshop/profile.dxf",
+      "dxf_sha256": "bbbd738a9fd9b7d48ff383cde237610f7c3742b622777b6eadcf5ee0110ca106",
+      "mooncam_state": "accepted_sampled"
+    },
+    "offset": {
+      "screenshot": "offset.jpg",
+      "screenshot_sha256": "8cda9c60a3c6457ef83157e1bcd3011a660abff0518d16d61ce94185ebfb1f38",
+      "width": 1280,
+      "height": 672,
+      "dxf": "../offset/profile.dxf",
+      "dxf_sha256": "da64a1449f17fbfdadb84f497d4f6a7626fe75f96d06a87c02d3e41cd7237658",
+      "mooncam_state": "rejected"
+    }
+  }
+}
