@@ -8,3 +8,7 @@
 *.mbti text eol=lf
 moon.pkg text eol=lf
 moon.mod text eol=lf
+
+# Keep exported CAD fixture hashes stable across Windows/Linux checkouts.
+*.dxf text eol=lf
+docs/cad/**/*.dxf linguist-generated=true
