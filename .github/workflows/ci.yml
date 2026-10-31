@@ -61,6 +61,8 @@ jobs:
         run: |
           npm run build
           npm run docs:check
+          npm run test:readme
+          npm run test:coverage
           npm run test:integration
           npm run test:consistency:checker
           npm run test:property

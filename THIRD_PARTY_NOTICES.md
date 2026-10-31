@@ -20,6 +20,7 @@ MoonCam 按公开机械运动学与微分几何公式独立编写，当前未复
 - Node.js：可选 CLI 和网页宿主。
 - Playwright：Apache-2.0，仅用于浏览器开发测试。
 - Python 标准库：用于独立数值验证。
+- [FreeCAD 1.1.4](https://github.com/FreeCAD/FreeCAD/releases/tag/1.1.4)：LGPL-2.1-or-later（[许可证](https://github.com/FreeCAD/FreeCAD/blob/1.1.4/LICENSE)）。仅作为独立导入工具用于 DXF 验收，不修改其代码、不复制其源码、不随 MoonCam 包分发。仓库保存自建算例、验收脚本、测量记录与应用截图；不是运行依赖。
 - [ezdxf](https://github.com/mozman/ezdxf)：MIT，仅用于测试读取导出文件；版本固定在 requirements-test.txt，生产运行不依赖它。
 
 本仓库手写代码使用 MIT 许可证。编译产物在本地或 CI 生成。

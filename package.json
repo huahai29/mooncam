@@ -22,7 +22,9 @@
     "performance:check": "node tests/performance-guard.mjs",
     "version:check": "node scripts/version.mjs",
     "toolchain:check": "node scripts/check-toolchain.mjs",
-    "test:consistency:checker": "node --test tests/consistency-check.test.mjs"
+    "test:consistency:checker": "node --test tests/consistency-check.test.mjs",
+    "test:readme": "node tests/readme-numbers.mjs",
+    "test:coverage": "node --test tests/coverage-check.test.mjs && node scripts/coverage.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1"

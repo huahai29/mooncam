@@ -1,0 +1,19 @@
+{
+  "scope": "All instrumented executable lines in root production MoonBit files; clean JS MoonBit unit tests only. Not branch coverage, host coverage or integration coverage.",
+  "max_uncovered": 72,
+  "files": {
+    "api.mbt": 20,
+    "model.mbt": 0,
+    "export.mbt": 0,
+    "motion.mbt": 0,
+    "search.mbt": 9,
+    "program.mbt": 3,
+    "version.mbt": 0,
+    "analysis.mbt": 15,
+    "contract.mbt": 12,
+    "geometry.mbt": 6,
+    "location.mbt": 2,
+    "topology.mbt": 1,
+    "diagnostics.mbt": 4
+  }
+}

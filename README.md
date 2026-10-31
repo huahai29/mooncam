@@ -33,7 +33,7 @@
 | 35 mm | 30.03° | −0.03° | 拒绝：仍略超限 |
 | 36 mm | 29.52° | +0.48° | 通过 |
 
-36 mm 是这次有限网格搜索的首个通过候选。更大的基圆降低了本例压力角，也增加了机构尺寸；采样通过不等于可以直接加工。
+36 mm 是这次有限网格搜索的首个通过候选。固定 720 分辨率，二分复算观测到的采样通过边界约为 **35.062208 mm**；1 mm 网格候选比它大约 **0.94 mm**，这是尺寸差，不是安全余量。直接取 35.06 mm 仍会超限；上述边界不代表连续轮廓的临界值。
 
 [完整案例](docs/完整操作案例.md)附输入文件、截图和三档采样对照，可按步骤复算。
 
@@ -44,7 +44,28 @@
 - 检查局部几何条件与折线交叉，显示余量、问题位置和相关边。
 - 搜索基圆候选，比较采样结果，导出 JSON、CSV、SVG 和毫米制 DXF。
 
-计算、校验、搜索和导出内容均由 MoonBit 实现；JavaScript 负责网页交互和 Node.js 文件读写。使用时无需 Python 或 CAD。
+### 语言分工
+
+| 语言 | 在项目中做什么 |
+| --- | --- |
+| MoonBit | 全部运动学、几何计算、采样判定、搜索、诊断与导出内容生成 |
+| JavaScript | 网页交互、Worker 通信、Node.js 文件读写，以及宿主接口测试 |
+| Python | 开发验收中的独立数值对照、DXF 读取与 FreeCAD 测量，不参与用户计算 |
+
+源码总行数包含测试和开发工具，不能直接当作运行时算法占比。使用 MoonCam 无需安装 Python 或 CAD。
+
+### 目录与模块
+
+| 模块 | 职责 | 关键文件或目录 |
+| --- | --- | --- |
+| 运动与几何 | 运动规律、程序求值、接触轮廓 | `motion.mbt`、`program.mbt`、`geometry.mbt` |
+| 分析与检查 | 采样、交叉检测、基圆搜索 | `analysis.mbt`、`topology.mbt`、`search.mbt` |
+| 位置与报告 | 段号和边号、诊断、JSON 与交换格式 | `location.mbt`、`diagnostics.mbt`、`api.mbt`、`export.mbt` |
+| 公共约定 | 数据类型、上限、状态、错误码与版本 | `model.mbt`、`contract.mbt`、`version.mbt` |
+| 宿主入口 | 库桥接、CLI、浏览器工作台 | `bridge/`、`bin/`、`web/` |
+| 示例与验证 | 可运行输入、核心测试、独立验收 | `examples/`、`*_wbtest.mbt`、`tests/`、`scripts/` |
+
+`docs/cad/**` 中的 DXF 是验收夹具，另含输入、测量记录和截图，不是算法源码。模块间的数据流见[架构说明](docs/架构说明.md)。
 
 ## 本地运行
 
@@ -118,7 +139,7 @@ Mooncakes 提供核心库，网页和 CLI 从仓库运行。在线版跟随 main
 - 验证：[测试与独立对照](docs/验证记录.md)、[CAD 导入](docs/CAD导入验收.md)、[跨平台一致性](docs/跨平台一致性.md)。
 - 开发：[更新记录](CHANGELOG.md)、[贡献说明](CONTRIBUTING.md)。
 
-CI 覆盖核心测试、浏览器操作、独立数值对照与 Windows/Linux 一致性检查。[查看运行结果](https://github.com/huahai29/mooncam/actions)
+CI 覆盖核心测试、README 示例数值、覆盖率门槛、浏览器操作、独立数值对照与 Windows/Linux 一致性检查。[查看运行结果](https://github.com/huahai29/mooncam/actions)
 
 ## 许可证
 
