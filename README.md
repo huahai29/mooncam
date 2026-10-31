@@ -6,7 +6,7 @@
 
 适合机械课程设计、教学模型和凸轮方案初选。目前支持平面盘形凸轮与直动滚子从动件，可设置正负偏置，转速保持恒定。
 
-**[打开在线工作台](https://huahai29.github.io/mooncam/web/)** · [跟着案例做一遍](docs/完整操作案例.md) · [Mooncakes](https://mooncakes.io/docs/huahai29/mooncam@0.4.0)
+**[打开在线工作台](https://huahai29.github.io/mooncam/web/)** · [跟着案例做一遍](docs/完整操作案例.md) · [Mooncakes](https://mooncakes.io/docs/huahai29/mooncam@0.4.1)
 
 在线版无需安装。计算在浏览器本地进行，输入参数不发送到服务器。
 
@@ -62,7 +62,7 @@ node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop
 ## 在 MoonBit 项目中使用
 
 ```sh
-moon add huahai29/mooncam@0.4.0
+moon add huahai29/mooncam@0.4.1
 ```
 
 在 `moon.pkg` 中导入：
@@ -91,7 +91,7 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 
 库使用弧度、rad/s 和一致的长度单位；网页与 JSON 使用毫米、角度和 rpm。完整示例在 [examples/library](examples/library/main.mbt)，接口签名见[公共 API](docs/公共API.md)。
 
-Mooncakes 0.4.0 提供核心库；网页和 CLI 从仓库运行。在线版跟随 main 分支；发行版本说明见[0.4.0](docs/releases/0.4.0.md)。网页页脚和新报告会记录实际引擎的版本与源码指纹，复算时请一并保留。
+Mooncakes 0.4.1 提供核心库；网页和 CLI 从仓库运行。在线版跟随 main 分支；发行版本说明见[0.4.1](docs/releases/0.4.1.md)。网页页脚和新报告会记录实际引擎的版本与源码指纹，复算时请一并保留。
 
 ## 文档与开发
 

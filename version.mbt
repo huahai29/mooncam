@@ -5,7 +5,7 @@
 pub fn generator_json() -> Json {
   {
     "name": "MoonCam",
-    "version": "0.4.0",
-    "source_digest": "sha256:17da239e19c102dd22dd852c16145851125175ba6f1a78f004576aafceb715d7",
+    "version": "0.4.1",
+    "source_digest": "sha256:5b7dfc7709b21c25bac89d2403f1f6b25c18896cca33c584e1f8d8e65687f51a",
   }
 }
