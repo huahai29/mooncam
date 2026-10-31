@@ -2,11 +2,11 @@
 package "huahai29/mooncam"
 
 // Values
-pub fn analyze(Program, Geometry, Int, Double, Double) -> Result[Analysis, String]
+pub fn analyze(Program, Geometry, Int32, Double, Double) -> Result[Analysis, String]
 
 pub fn checked_export(Array[CamPoint], String) -> Result[String, String]
 
-pub fn compare_sampling(Program, Geometry, Array[Int], Double, Double) -> Result[SamplingComparison, String]
+pub fn compare_sampling(Program, Geometry, Array[Int32], Double, Double) -> Result[SamplingComparison, String]
 
 pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
 
@@ -20,7 +20,7 @@ pub fn diagnose(Program, Analysis, Double) -> Result[Diagnostics, String]
 
 pub fn dxf_mm(Array[CamPoint]) -> String
 
-pub fn error_exit_code(String) -> Int
+pub fn error_exit_code(String) -> Int32
 
 pub fn evaluate(Program, Double) -> Result[Motion, String]
 
@@ -30,31 +30,31 @@ pub fn finite(Double) -> Bool
 
 pub fn generator_json() -> Json
 
-pub fn input_limit_bytes() -> Int
+pub fn input_limit_bytes() -> Int32
 
 pub fn locate_angle(Program, Double) -> Result[Location, String]
 
-pub fn locate_edge(Program, Array[CamPoint], Int) -> Result[EdgeLocation, String]
+pub fn locate_edge(Program, Array[CamPoint], Int32) -> Result[EdgeLocation, String]
 
-pub fn locate_sample(Program, Array[CamPoint], Int) -> Result[Location, String]
+pub fn locate_sample(Program, Array[CamPoint], Int32) -> Result[Location, String]
 
-pub fn measure(Program, Geometry, Int, Double, Double) -> Result[Metrics, String]
+pub fn measure(Program, Geometry, Int32, Double, Double) -> Result[Metrics, String]
 
 pub fn normalized(Law, Double) -> Result[Motion, String]
 
-pub fn profile_crossings(Array[CamPoint]) -> Result[Int, String]
+pub fn profile_crossings(Array[CamPoint]) -> Result[Int32, String]
 
 pub fn program(Array[Segment]) -> Result[Program, String]
 
-pub fn result_exit_code(String) -> Int
+pub fn result_exit_code(String) -> Int32
 
 pub fn run_json(String) -> String
 
-pub fn sample(Program, Geometry, Int) -> Result[Array[CamPoint], String]
+pub fn sample(Program, Geometry, Int32) -> Result[Array[CamPoint], String]
 
 pub fn sampled_acceptance(Bool, CrossingCheck) -> Bool
 
-pub fn search_base(Program, Double, Double, Double, Double, Int, Int, Double, Double) -> Result[SearchResult, SearchError]
+pub fn search_base(Program, Double, Double, Double, Double, Int32, Int32, Double, Double) -> Result[SearchResult, SearchError]
 
 pub fn session() -> Session
 
@@ -71,8 +71,8 @@ pub fn validate_segments_json(String) -> String
 // Types and methods
 pub(all) struct Analysis {
   points : Array[CamPoint]
-  pressure_sample_index : Int
-  offset_factor_sample_index : Int
+  pressure_sample_index : Int32
+  offset_factor_sample_index : Int32
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
@@ -80,13 +80,13 @@ pub(all) struct Analysis {
   max_velocity : Double
   max_acceleration : Double
   max_jerk : Double
-  jerk_jumps : Int
+  jerk_jumps : Int32
   sampled_local_feasible : Bool
   crossings : CrossingCheck
   crossing_witnesses : Array[CrossingWitness]
   crossing_witnesses_truncated : Bool
   sampled_feasible : Bool
-  nominal_resolution : Int
+  nominal_resolution : Int32
 }
 pub fn Analysis::state(Self) -> String
 
@@ -115,24 +115,24 @@ pub(all) struct ConstraintDiagnostic {
 
 pub(all) enum CrossingCheck {
   NotChecked
-  Checked(Int)
-  Indeterminate(Int, Int)
+  Checked(Int32)
+  Indeterminate(Int32, Int32)
   Failed(String)
 }
 pub fn CrossingCheck::status(Self) -> String
 
 pub(all) struct CrossingReport {
-  crossings : Int
-  pair_visits : Int
-  uncertain_pairs : Int
+  crossings : Int32
+  pair_visits : Int32
+  uncertain_pairs : Int32
   witnesses : Array[CrossingWitness]
   witnesses_truncated : Bool
 }
 
 pub(all) struct CrossingWitness {
   kind : String
-  edge_a : Int
-  edge_b : Int
+  edge_a : Int32
+  edge_b : Int32
 }
 
 pub(all) struct Diagnostics {
@@ -141,8 +141,8 @@ pub(all) struct Diagnostics {
 }
 
 pub(all) struct EdgeLocation {
-  edge_index : Int
-  segment_index : Int
+  edge_index : Int32
+  segment_index : Int32
   start : Location
   end : Location
 }
@@ -158,7 +158,7 @@ pub(all) enum ErrorCode {
   NoResult
 }
 pub fn ErrorCode::code(Self) -> String
-pub fn ErrorCode::exit_code(Self) -> Int
+pub fn ErrorCode::exit_code(Self) -> Int32
 
 pub(all) struct Geometry {
   base_radius : Double
@@ -173,8 +173,8 @@ pub(all) enum Law {
 }
 
 pub(all) struct Location {
-  sample_index : Int?
-  segment_index : Int
+  sample_index : Int32?
+  segment_index : Int32
   theta_rad : Double
   segment_start_rad : Double
   segment_end_rad : Double
@@ -183,8 +183,8 @@ pub(all) struct Location {
 }
 
 pub(all) struct Metrics {
-  pressure_sample_index : Int
-  offset_factor_sample_index : Int
+  pressure_sample_index : Int32
+  offset_factor_sample_index : Int32
   max_pressure : Double
   pressure_angle : Double
   min_offset_factor : Double
@@ -192,10 +192,10 @@ pub(all) struct Metrics {
   max_velocity : Double
   max_acceleration : Double
   max_jerk : Double
-  jerk_jumps : Int
+  jerk_jumps : Int32
   sampled_local_feasible : Bool
-  sample_count : Int
-  nominal_resolution : Int
+  sample_count : Int32
+  nominal_resolution : Int32
 }
 
 pub(all) struct Motion {
@@ -219,8 +219,8 @@ pub(all) struct SamplingComparison {
 }
 
 pub(all) struct SamplingLevel {
-  nominal_resolution : Int
-  sample_count : Int
+  nominal_resolution : Int32
+  sample_count : Int32
   pressure : ConstraintDiagnostic
   offset_factor : ConstraintDiagnostic
   crossings : CrossingCheck
@@ -231,15 +231,15 @@ pub(all) enum SearchError {
   InvalidInput(String)
   NumericalFailure(String)
   IndeterminateGeometry(String)
-  NoCandidate(Int)
+  NoCandidate(Int32)
 }
 
 pub(all) struct SearchResult {
   geometry : Geometry
   analysis : Analysis
-  tested : Int
+  tested : Int32
   grid_step : Double
-  verification_resolution : Int
+  verification_resolution : Int32
 }
 
 pub(all) struct Segment {

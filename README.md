@@ -40,7 +40,7 @@
 
 ## 在自己电脑上运行
 
-需要 [MoonBit 工具链](https://www.moonbitlang.com/download/)和 Node.js 22+。仓库固定验证的 MoonBit 版本为 `0.10.15+943464bfa`。
+需要 [MoonBit 工具链](https://www.moonbitlang.com/download/)和 Node.js 22+。最低要求 moonc 0.10.16；仓库固定验证的 MoonBit 版本为 `0.10.16+b1a0e846e`。
 
 ```sh
 git clone https://github.com/huahai29/mooncam.git

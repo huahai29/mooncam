@@ -89,33 +89,33 @@ MoonBit 的 `ConstraintDiagnostic.value/limit/margin` 对压力角使用弧度�
 <!-- BEGIN GENERATED API -->
 
 ```moonbit
-pub fn analyze(Program, Geometry, Int, Double, Double) -> Result[Analysis, String]
+pub fn analyze(Program, Geometry, Int32, Double, Double) -> Result[Analysis, String]
 pub fn checked_export(Array[CamPoint], String) -> Result[String, String]
-pub fn compare_sampling(Program, Geometry, Array[Int], Double, Double) -> Result[SamplingComparison, String]
+pub fn compare_sampling(Program, Geometry, Array[Int32], Double, Double) -> Result[SamplingComparison, String]
 pub fn contact(Program, Geometry, Double) -> Result[CamPoint, String]
 pub fn contract_json() -> String
 pub fn crossing_report(Array[CamPoint]) -> Result[CrossingReport, String]
 pub fn csv(Array[CamPoint]) -> String
 pub fn diagnose(Program, Analysis, Double) -> Result[Diagnostics, String]
 pub fn dxf_mm(Array[CamPoint]) -> String
-pub fn error_exit_code(String) -> Int
+pub fn error_exit_code(String) -> Int32
 pub fn evaluate(Program, Double) -> Result[Motion, String]
 pub fn example_program(Law) -> Program
 pub fn finite(Double) -> Bool
 pub fn generator_json() -> Json
-pub fn input_limit_bytes() -> Int
+pub fn input_limit_bytes() -> Int32
 pub fn locate_angle(Program, Double) -> Result[Location, String]
-pub fn locate_edge(Program, Array[CamPoint], Int) -> Result[EdgeLocation, String]
-pub fn locate_sample(Program, Array[CamPoint], Int) -> Result[Location, String]
-pub fn measure(Program, Geometry, Int, Double, Double) -> Result[Metrics, String]
+pub fn locate_edge(Program, Array[CamPoint], Int32) -> Result[EdgeLocation, String]
+pub fn locate_sample(Program, Array[CamPoint], Int32) -> Result[Location, String]
+pub fn measure(Program, Geometry, Int32, Double, Double) -> Result[Metrics, String]
 pub fn normalized(Law, Double) -> Result[Motion, String]
-pub fn profile_crossings(Array[CamPoint]) -> Result[Int, String]
+pub fn profile_crossings(Array[CamPoint]) -> Result[Int32, String]
 pub fn program(Array[Segment]) -> Result[Program, String]
-pub fn result_exit_code(String) -> Int
+pub fn result_exit_code(String) -> Int32
 pub fn run_json(String) -> String
-pub fn sample(Program, Geometry, Int) -> Result[Array[CamPoint], String]
+pub fn sample(Program, Geometry, Int32) -> Result[Array[CamPoint], String]
 pub fn sampled_acceptance(Bool, CrossingCheck) -> Bool
-pub fn search_base(Program, Double, Double, Double, Double, Int, Int, Double, Double) -> Result[SearchResult, SearchError]
+pub fn search_base(Program, Double, Double, Double, Double, Int32, Int32, Double, Double) -> Result[SearchResult, SearchError]
 pub fn session() -> Session
 pub fn svg(Array[CamPoint]) -> String
 pub fn timed(Program, Double, Double) -> Result[Motion, String]
@@ -124,7 +124,7 @@ pub fn validate_segments_json(String) -> String
 pub fn Analysis::state(Self) -> String
 pub fn CrossingCheck::status(Self) -> String
 pub fn ErrorCode::code(Self) -> String
-pub fn ErrorCode::exit_code(Self) -> Int
+pub fn ErrorCode::exit_code(Self) -> Int32
 pub fn Session::export_profile(Self, String) -> String
 pub fn Session::run(Self, String) -> String
 ```

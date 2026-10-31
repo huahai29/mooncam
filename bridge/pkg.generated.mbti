@@ -4,13 +4,13 @@ package "huahai29/mooncam/bridge"
 // Values
 pub fn contract() -> String
 
-pub fn error_exit_code(String) -> Int
+pub fn error_exit_code(String) -> Int32
 
 pub fn export_profile(String) -> String
 
-pub fn input_limit_bytes() -> Int
+pub fn input_limit_bytes() -> Int32
 
-pub fn result_exit_code(String) -> Int
+pub fn result_exit_code(String) -> Int32
 
 pub fn run(String) -> String
 
