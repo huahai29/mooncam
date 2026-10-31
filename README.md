@@ -103,7 +103,7 @@ Mooncakes 0.4.0 提供核心库；网页和 CLI 从仓库运行。在线版跟�
 - [CAD 导入验收](docs/CAD导入验收.md)：FreeCAD 原生导入的尺寸、闭合与坐标对照。
 - [版本追溯与性能护栏](docs/版本追溯与性能护栏.md)、[更新记录](CHANGELOG.md)与[后续计划](docs/后续改进清单.md)。
 
-当前测试包括四后端各 54 组核心测试、23 组集成测试和 13 组浏览器测试，另有独立数值对照与 DXF 读取验证。对应提交的运行结果见 [GitHub Actions](https://github.com/huahai29/mooncam/actions)。参与开发或反馈问题请看[贡献说明](CONTRIBUTING.md)。
+当前测试包括四后端各 62 组核心测试（54 组固定用例 + 8 组随机性质用例）、23 组集成测试、8 组 JSON 契约性质测试（含 1,500 例结构变异模糊输入）和 13 组浏览器测试。独立数值对照用 Bernstein 形式与参数曲率另一条路线核对 205 组参数、149,983 个采样点与 171,942 条断言，另用 40 位十进制参考复核 402 个点（坐标差 ≤8.7e-16）；CI 在 Windows 与 Linux 上分别生成一致性清单并比对。对应提交的运行结果见 [GitHub Actions](https://github.com/huahai29/mooncam/actions)。参与开发或反馈问题请看[贡献说明](CONTRIBUTING.md)。
 
 ## 许可证
 

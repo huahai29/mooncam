@@ -7,7 +7,11 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,11 +22,20 @@ jobs:
         with:
           python-version: '3.12'
       - name: 安装固定 MoonBit 工具链
+        shell: bash
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o /tmp/install-moonbit.sh
-          bash /tmp/install-moonbit.sh "$(cat .moonbit-version)"
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          VERSION="$(cat .moonbit-version)"
+          echo "installing moonc $VERSION"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            MOONBIT_INSTALL_VERSION="$VERSION" pwsh -NoProfile -Command "irm https://cli.moonbitlang.com/install/powershell.ps1 | iex"
+            echo "$USERPROFILE/.moon/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o /tmp/install-moonbit.sh
+            bash /tmp/install-moonbit.sh "$VERSION"
+            echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          fi
       - name: 格式与严格检查
+        shell: bash
         run: |
           node scripts/check-toolchain.mjs --exact
           node scripts/version.mjs
@@ -31,42 +44,76 @@ jobs:
           moon check --deny-warn --target all
           moon info
           git diff --exit-code -- '*.mbti'
-      - name: 多后端测试与纯 MoonBit 示例
+      - name: 双后端测试与纯 MoonBit 示例
+        shell: bash
+        run: |
+          moon test --target js
+          moon test --target wasm-gc
+          moon run examples/library --target wasm-gc
+      - name: 其余后端（Linux）
+        if: runner.os == 'Linux'
+        shell: bash
         run: |
           moon test --target wasm
-          moon test --target wasm-gc
-          moon test --target js
           moon test --target native
-          moon run examples/library --target wasm-gc
       - name: 构建、导出与独立验证
+        shell: bash
         run: |
           npm run build
           npm run docs:check
           npm run test:integration
-          python tests/oracle.py
+          npm run test:property
           python -m pip install -r requirements-test.txt
+          python tests/oracle.py
+          python tests/oracle_highprec.py
           python tests/dxf_interop.py
           npm run demo
           npm run benchmark
-          npm run performance:check
-      - name: 浏览器测试
+      - name: 跨平台一致性清单
+        shell: bash
+        run: node tests/consistency.mjs
+      - name: 浏览器测试（Linux）
+        if: runner.os == 'Linux'
+        shell: bash
         run: |
           npm ci
           npx playwright install --with-deps chromium
           npm run test:browser
-      - name: 保存报告与浏览器截图
+      - name: 保存报告、清单与浏览器截图
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mooncam-validation
+          name: mooncam-validation-${{ matrix.os }}
           path: |
             artifacts/
             test-results/
             web/
 
+  # 同一份清单在不同操作系统上必须一致：先比对规范化摘要，再在失败时报告数值差异。
+  consistency:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 收集各平台清单
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mooncam-validation-*
+          path: downloaded
+      - name: 比对 Windows 与 Linux
+        shell: bash
+        run: |
+          mkdir -p artifacts/consistency
+          find downloaded -name 'manifest-*.json' -print -exec cp {} artifacts/consistency/ \;
+          ls -l artifacts/consistency
+          node tests/consistency.check.mjs artifacts/consistency
+
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: verify
+    needs: [verify, consistency]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -82,7 +129,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: mooncam-validation
+          name: mooncam-validation-ubuntu-latest
           path: validated
       - name: Assemble validated static workbench
         run: |
