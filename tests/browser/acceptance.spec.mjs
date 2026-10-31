@@ -1,0 +1,27 @@
+import {test,expect} from '@playwright/test';
+import {readFile,mkdtemp,writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {readZip} from '../zip-reader.mjs';
+test('acceptance: downloaded candidate ZIP can be replayed by CLI with identical profile',async({page})=>{
+ await page.goto('/');await expect(page.locator('#analyze')).toBeEnabled();
+ await page.locator('#preset').selectOption('pressure-limit');await expect(page.locator('#base')).toHaveValue('5');
+ await page.locator('#analyze').click();await expect(page.locator('#metrics')).toContainText('需调整');
+ await page.locator('#search').click();await expect(page.locator('#apply-candidate')).toBeEnabled();
+ await page.locator('#apply-candidate').click();await expect(page.locator('#candidate-note')).toContainText('重新计算');
+ await expect(page.locator('#metrics')).toContainText('29.52°');
+ const [download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-export="bundle"]').click()]);
+ const files=readZip(await readFile(await download.path()));
+ const root=await mkdtemp(join(tmpdir(),'mooncam-acceptance-')),input=join(root,'input.json'),out=join(root,'replayed');
+ await writeFile(input,files['input.json']);
+ const replay=spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),input,'--out',out],{encoding:'utf8'});
+ expect(replay.status,replay.stderr).toBe(0);
+ const report=JSON.parse(await readFile(join(out,'report.json'),'utf8'));
+ expect(report.result.base_radius_mm).toBe(36);expect(report.result.state).toBe('accepted_sampled');
+ expect(await readFile(join(out,'profile.csv'),'utf8')).toBe(files['profile.csv']);
+ expect(report.generator).toEqual(JSON.parse(files['manifest.json']).generator);
+ const repeated=spawnSync(process.execPath,[resolve('bin/mooncam.mjs'),input,'--out',out],{encoding:'utf8'});
+ expect(repeated.status).toBe(1);expect(repeated.stderr).toContain('already exists');
+ expect(await readFile(join(out,'profile.csv'),'utf8')).toBe(files['profile.csv']);
+});

@@ -12,6 +12,8 @@
 
 **[在线工作台](https://huahai29.github.io/mooncam/web/)** · [完整案例](docs/完整操作案例.md) · [Mooncakes](https://mooncakes.io/docs/huahai29/mooncam@0.4.1)
 
+验收入口：[复现步骤与版本关系](docs/验收入口.md) · [CAD 导入记录](docs/CAD导入验收.md) · [CI 检查](https://github.com/huahai29/mooncam/actions)。
+
 在线版无需安装，计算在浏览器本地完成，输入参数不发送到服务器。
 
 [采样误差实验](docs/采样误差实验.md)：常规算例连续极值参考约 27.60949108°，720 分辨率低估约 0.00015583°，5760 时约 0.00000054°；另有闭式极值算例对照。上述是固定算例误差，不是任意输入的误差保证。
@@ -89,8 +91,10 @@ node bin/mooncam.mjs examples/workshop.json --out artifacts/workshop
 生成的文件位于 `artifacts/workshop/`：
 
 - `input.json`：本次实际使用的参数，可再次传给 CLI 复算。
-- `report.json`：检查结论、诊断与版本信息。
+- `report.json`：检查结论、诊断与版本信息；`owner.json` 为本地交付元数据。
 - `profile.csv`：逐点分析数据；`profile.svg`：轮廓预览；`profile.dxf`：毫米制轮廓，用于 CAD 交换。
+
+重复演示请换用新的输出目录，例如 `artifacts/workshop-2`；CLI 会拒绝已有目录，保留原结果。
 
 CLI 退出码：`0` 采样通过，`2` 方案拒绝，`3` 搜索无候选，`4` 检查未完成，`1` 输入或运行错误。拒绝的方案也能导出，方便检查原因。更多算例及排错方法见[本地运行说明](docs/本地运行.md)。
 
@@ -126,7 +130,7 @@ match @cam.analyze(p, g, 720, @math.PI / 6.0, 2.0 * @math.PI) {
 
 库使用弧度、rad/s 和一致的长度单位；网页与 JSON 使用毫米、角度和 rpm。[完整示例](examples/library/main.mbt) · [公共 API](docs/公共API.md)
 
-Mooncakes 提供核心库，网页和 CLI 从仓库运行。在线版跟随 main 更新，保存报告时请一并保留引擎版本与源码指纹。
+Mooncakes **0.4.1 提供核心库**；GitHub 工作台和 CLI 包含后续候选应用、ZIP 保存与安全交付改进，核心算法和公共 API 保持一致。在线版跟随 main 更新，保存报告时请一并保留引擎版本与源码指纹。
 
 ## 使用范围
 
